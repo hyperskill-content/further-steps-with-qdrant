@@ -11,6 +11,7 @@ Here are the main starter directories and files in this repo:
 │   ├── task_2.md
 │   ├── task_3.md
 │   └── task_4.md
+├── dataset/
 ├── README.md
 └── .gitignore
 ```

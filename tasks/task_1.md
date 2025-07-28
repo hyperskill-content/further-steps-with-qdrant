@@ -9,7 +9,7 @@ By default, Qdrant uses the HNSW index for fast Approximate Nearest Neighbor (AN
 
 Exact k-Nearest Neighbor (k-NN) search involves searching the entire dataset to find the true nearest neighbors. While this approach is slower and is not suitable for production use, it provides precise results. The exact k-NN search serves as a baseline for evaluating the accuracy of ANN search, allowing for comparisons of the trade-offs between speed and precision.
 
-In this task, we will evaluate the accuracy of the approximate search for our existing collection by calculating the average precision@k and compare the speed of the exact search and the approximate search with a small test dataset. This is only a single component of the search evaluation and the results should be interpreted with caution, but it does serve as a good sanity check and a way to understand whether the expectations match the current results.
+In this task, we will evaluate the accuracy of the approximate search for our existing collection by calculating the average precision@k and compare the speed of the exact search and the approximate search with a [small test dataset](../dataset/queries_embeddings.json). This is only a single component of the search evaluation and the results should be interpreted with caution, but it does serve as a good sanity check and a way to understand whether the expectations match the current results.
 
 Precision@k is a metric that measures the quality of the search results and focuses on the relevance of items retrieved during the ANN search, and is calculated as
 
@@ -19,7 +19,7 @@ A value of 1 indicates that all approximate search results are identical to the 
 
 "Out of all the items the search retrieved, how many are true nearest neighbors?"
 
-Note that in the context of this project, the precision@k is the same as the accuracy@k (this is not true in the general case), and they will be used interchangeably here. 
+Note that in the context of this project, the precision@k is the same as the accuracy (this is not true in the general case), and they will be used interchangeably here. 
 
 Here is how you can perform the approximate (the default) search with the Qdrant client:
 
@@ -84,7 +84,7 @@ Here is the series of steps to perform:
 
 * Run the Qdrant Docker image (the same way as it was done in the stage 1 of the Vector database with Qdrant project);
 
-* Download the test dataset that will be used for the calculation. It is a JSON file with 100 queries and their corresponding text-embedding-ada-002 embeddings. The queries are stored as the keys, and the embeddings are stored as the values.
+* Download the [test dataset](../dataset/queries_embeddings.json) that will be used for the calculation. It is a JSON file with 100 queries and their corresponding text-embedding-ada-002 embeddings. The queries are stored as the keys, and the embeddings are stored as the values.
 
 * Load the dataset with the script. This can be done as follows:
 
@@ -108,3 +108,12 @@ precision = len(ann_ids.intersection(knn_ids)) / k
 * Calculate the averages of the obtained logged time and the precision.
 
 * Display the averages and reflect on the obtained results.
+
+## Useful resources 
+
+### Docs
+[Precision and recall at K in ranking and recommendations from Evidently](https://www.evidentlyai.com/ranking-metrics/precision-recall-at-k)     
+[Hierarchical Navigable Small Worlds (HNSW) from Pinecone](https://www.pinecone.io/learn/series/faiss/hnsw/)    
+[Understanding the approximate nearest neighbor (ANN) algorithm from Elastic](https://www.elastic.co/blog/understanding-ann) 
+[kNN search from Elastic doccumentation](https://www.elastic.co/docs/solutions/search/vector/knn)   
+[exact = True in models.SearchParams()](https://qdrant.tech/documentation/guides/optimize/?q=exact%3Dtrue#fine-tuning-search-parameters)
