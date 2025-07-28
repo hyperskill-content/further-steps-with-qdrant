@@ -24,7 +24,7 @@ m=16, ef_construct=32
 m=16, ef_construct=50
 ```
 
-The index update can be performed with the `.update_collection()` method of the client:
+The index update can be performed with the [`.update_collection()`](https://api.qdrant.tech/v-1-13-x/api-reference/collections/update-collection) method of the client:
 
 ```
 COLLECTION_NAME = 'arxiv_papers'
@@ -36,3 +36,9 @@ client.update_collection(
 ```
 
 Print the results and reflect on the effect of different parameters.
+
+## Useful resources 
+
+### Docs
+[Vector Index](https://qdrant.tech/documentation/concepts/indexing/#vector-index)      
+[Update collection parameters](https://qdrant.tech/documentation/concepts/collections/?q=hnsw_con#update-collection-parameters)

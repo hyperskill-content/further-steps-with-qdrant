@@ -4,7 +4,7 @@ In the previous stage, we have observed the differences between k-NN and the app
 
 ## Theory
 
-When a query is performed, the HNSW algorithm starts searching from an entry point in the graph and explores neighboring nodes to find the closest vectors to the query vector. You can read more on the inner workings of HNSW in the Faiss book chapter at Pinecone. The `hnsw_ef` parameter determines how many nodes the algorithm keeps in its priority queue (the list of candidates) during this search process. In the context of HNSW, this parameter is often referred to as ef and stands for "exploration factor". A larger candidate list allows to consider a broader set of potential nearest neighbors.
+When a query is performed, the HNSW algorithm starts searching from an entry point in the graph and explores neighboring nodes to find the closest vectors to the query vector. You can read more on the [inner workings of HNSW in the Faiss book chapter at Pinecone](https://www.pinecone.io/learn/series/faiss/hnsw/). The `hnsw_ef` parameter determines how many nodes the algorithm keeps in its priority queue (the list of candidates) during this search process. In the context of HNSW, this parameter is often referred to as ef and stands for "exploration factor". A larger candidate list allows to consider a broader set of potential nearest neighbors.
 
 In this stage, we will explore how different values of the `hnsw_ef` parameter affect the accuracy and the speed of the query execution.
 
@@ -66,3 +66,8 @@ results = [
 ```
 
 * Display the results and reflect on the obtained values. 
+
+## Useful resources 
+
+### Topics
+[Hierarchical Navigable Small Worlds](https://hyperskill.org/learn/step/52669)     
