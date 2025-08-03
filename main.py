@@ -2,7 +2,7 @@
 
 import json
 import time
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 from qdrant_client import QdrantClient, models
 
@@ -16,7 +16,10 @@ COLLECTION_NAME = "arxiv_papers"
 k = 10
 
 
-def evaluate(client: QdrantClient, dataset: Dict[str, Any]) -> Dict[str, float]:
+def evaluate(
+    client: QdrantClient, dataset: Dict[str, Any], rescore: bool
+) -> Dict[str, float]:
+    """Evaluate the performance of ANN and k-NN search with rescore option."""
     ann_times = []
     knn_times = []
     ann_precision = []
@@ -25,7 +28,15 @@ def evaluate(client: QdrantClient, dataset: Dict[str, Any]) -> Dict[str, float]:
         print(f"Processing query: {text}")
         start_time_ann = time.time()
         ann_result = client.query_points(
-            collection_name=COLLECTION_NAME, query=embedding, limit=k
+            collection_name=COLLECTION_NAME,
+            query=embedding,
+            limit=k,
+            search_params=models.SearchParams(
+                quantization=models.QuantizationSearchParams(
+                    rescore=rescore,
+                    oversampling=2.0,
+                )
+            ),
         ).points
         ann_time = time.time() - start_time_ann
         ann_times.append(ann_time)
@@ -36,7 +47,10 @@ def evaluate(client: QdrantClient, dataset: Dict[str, Any]) -> Dict[str, float]:
             collection_name=COLLECTION_NAME,
             query=embedding,
             limit=k,
-            search_params=models.SearchParams(exact=True),
+            search_params=models.SearchParams(
+                exact=True,
+                quantization=models.QuantizationSearchParams(ignore=True),
+            ),
         ).points
         knn_time = time.time() - start_time_knn
         knn_times.append(knn_time)
@@ -59,24 +73,27 @@ def evaluate(client: QdrantClient, dataset: Dict[str, Any]) -> Dict[str, float]:
     return result
 
 
-def display_results(results: Dict[Tuple[int, int], Dict[str, float]]):
+def display_results(results: Dict[bool, Dict[str, float]]):
     """Display the results of the evaluation."""
     print("\nResults:")
-    print("-" * 80)
+    print("-" * 54)
     print(
-        f"{'m':<5} {'ef_construct':<15} {'Precision@' + str(k):<15} {'ANN Time (ms)':<15} {'k-NN Time (ms)':<15}"
+        f"{'rescore':<7} "
+        f"{'Precision@' + str(k):<15} "
+        f"{'ANN Time (ms)':<15} "
+        f"{'k-NN Time (ms)':<15}"
     )
-    print("-" * 80)
+    print("-" * 54)
 
-    for (m, ef_construct), metrics in results.items():
+    for rescore, metrics in results.items():
         print(
-            f"{m:<5} {ef_construct:<15} "
+            f"{rescore:<7} "
             f"{metrics['avg_precision']:.4f}{'':<9} "
             f"{metrics['avg_ann_time'] * 1000:.2f}{'':<10} "
             f"{metrics['avg_knn_time'] * 1000:.2f}"
         )
 
-    print("-" * 80)
+    print("-" * 54)
 
 
 def main():
@@ -86,29 +103,42 @@ def main():
     with open(QUERIES_FILE, "r", encoding="utf-8") as file:
         test_dataset = json.load(file)
 
+    #  reset the HNSW config parameters to their default values
+    client.update_collection(
+        collection_name=COLLECTION_NAME,
+        hnsw_config=models.HnswConfigDiff(
+            m=16,
+            ef_construct=100,
+        ),
+    )
+
+    # while True:
+    #     collection_info = client.get_collection(collection_name=COLLECTION_NAME)
+    #     if collection_info.status == models.CollectionStatus.GREEN:
+    #         break
+
+    client.update_collection(
+        collection_name=COLLECTION_NAME,
+        optimizer_config=models.OptimizersConfigDiff(),
+        quantization_config=models.ScalarQuantization(
+            scalar=models.ScalarQuantizationConfig(
+                type=models.ScalarType.INT8,
+                quantile=0.99,
+                always_ram=False,
+            ),
+        ),
+    )
+
     test_cases = [
-        (8, 50),
-        (8, 100),
-        (16, 32),
-        (16, 50),
+        True,
+        False,
     ]
 
     results = {}
-    for m, ef_construct in test_cases:
-        print(f"Running evaluation with m={m}, ef_construct={ef_construct}")
-        print("Updating collection parameters...")
-        start_time = time.time()
-        client.update_collection(
-            collection_name=COLLECTION_NAME,
-            hnsw_config=models.HnswConfigDiff(
-                m=m,
-                ef_construct=ef_construct,
-            ),
-        )
-        end_time = time.time()
-        print(f"Collection parameters updated in {end_time - start_time:.2f} seconds")
-        result = evaluate(client, dataset=test_dataset)
-        results[(m, ef_construct)] = result
+    for rescore in test_cases:
+        print(f"Running evaluation with rescore={rescore}")
+        result = evaluate(client, dataset=test_dataset, rescore=rescore)
+        results[rescore] = result
 
     display_results(results)
 
