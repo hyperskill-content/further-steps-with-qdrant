@@ -32,3 +32,35 @@ Fork → Clone → Branch → Implement → PR → Review
 * Push the branch to the forked repo
 * Create a Pull Request from the fork back to the main repo
 * We will review the PR and provide feedback through GitHub
+
+## **How to Run**
+
+1. Ensure you have Qdrant running (e.g., via Docker).
+2. Activate your virtual environment:
+   ```bash
+   source venv/bin/activate
+   ```
+3. Install the dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Run the evaluation script:
+   ```bash
+   python3 tasks/evaluate_quantization.py
+   ```
+
+### Example Output
+```json
+[
+    {
+        "rescore": true,
+        "avg_precision": 0.9960000000000001,
+        "avg_query_time_ms": 8.629827499389648
+    },
+    {
+        "rescore": false,
+        "avg_precision": 0.8359999999999995,
+        "avg_query_time_ms": 8.576357364654541
+    }
+]
+```
