@@ -7,13 +7,49 @@ Here are the main starter directories and files in this repo:
 
 ```
 ├── tasks/
+│   ├── evaluate_hnsw_ef.py
 │   ├── task_1.md
 │   ├── task_2.md
 │   └── task_3.md
 ├── dataset/
+├── requirements.txt
 ├── README.md
 └── .gitignore
 ```
+
+## **Installation**
+
+To set up the virtual environment and install the required dependencies, run:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## **Usage**
+
+### **Evaluating HNSW ef Parameter**
+
+To evaluate the impact of the `hnsw_ef` parameter on search precision and performance, run:
+
+```bash
+cd tasks
+python3 evaluate_hnsw_ef.py
+```
+
+This script will:
+* Load queries and embeddings from `dataset/queries_embeddings.json`.
+* Establish ground truth using exact search (`exact=True`).
+* Test various `hnsw_ef` values (10, 20, 50, 100, 200).
+* Output average precision and average query time for each value.
+
+Typical results for the `arxiv_papers` collection:
+- `hnsw_ef = 10`: Average Precision ~0.94, Query time ~4.7 ms
+- `hnsw_ef = 20`: Average Precision ~0.98, Query time ~5.1 ms
+- `hnsw_ef = 50`: Average Precision ~1.00, Query time ~6.1 ms
+- `hnsw_ef = 100`: Average Precision ~1.00, Query time ~7.8 ms
+- `hnsw_ef = 200`: Average Precision ~1.00, Query time ~10.9 ms
 
 ## **Tasks**
 
