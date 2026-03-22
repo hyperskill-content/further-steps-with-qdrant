@@ -34,7 +34,7 @@ def evaluate_hnsw_ef(results_count, hnsw_ef_values, dataset):
         ).points
         ground_truth[query_text] = set(item.id for item in knn_result)
 
-    resultsArray = []
+    results_array = []
 
     for hnsw_ef in hnsw_ef_values:
         query_times = []
@@ -45,26 +45,26 @@ def evaluate_hnsw_ef(results_count, hnsw_ef_values, dataset):
                 collection_name=COLLECTION_NAME,
                 query=embedding,
                 limit=results_count,
-                search_params=models.SearchParams(hnsw_ef=hnsw_ef)  # ← key change
+                search_params=models.SearchParams(hnsw_ef=hnsw_ef)
             ).points
 
-            elapsed_ms = (time.time() - start_time) * 1000  # convert to ms
+            elapsed_ms = (time.time() - start_time) * 1000
             query_times.append(elapsed_ms)
             ann_ids = set(item.id for item in ann_result)
-            exact_ids = ground_truth[query_text]  # fetch ground truth
+            exact_ids = ground_truth[query_text]
             precision = len(ann_ids.intersection(exact_ids)) / results_count
             precisions.append(precision)
 
         avg_precision = sum(precisions) / len(precisions)
         avg_query_time = sum(query_times) / len(query_times)
 
-        resultsArray.append({
+        results_array.append({
             "hnsw_ef": hnsw_ef,
             "avg_precision": avg_precision,
             "avg_query_time_ms": avg_query_time
         })
 
-    return resultsArray
+    return results_array
 
 
 if __name__ == "__main__":
