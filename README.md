@@ -34,4 +34,18 @@ Fork → Clone → Branch → Implement → PR → Review
 * We will review the PR and provide feedback through GitHub
 
 ## **Observations**
-![Screenshot 2026-03-23 at 17.03.51.png](../../Library/CloudStorage/OneDrive-azureford/Desktop/Screenshot%202026-03-23%20at%2017.03.51.png)
+=============================================
+  Results with rescore=True
+=============================================
+  Avg Precision:       0.9990
+  Avg Query Time (ms): 8.3095
+=============================================
+
+Loaded 100 queries.
+
+=============================================
+  Results with rescore=False
+=============================================
+  Avg Precision:       0.8320
+  Avg Query Time (ms): 4.5111
+=============================================
