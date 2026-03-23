@@ -60,3 +60,11 @@ avg_ann_time = sum(ann_times) / len(ann_times)
 avg_knn_time = sum(knn_times) / len(knn_times)
 
 result_formatting(k, avg_precision, avg_ann_time, avg_knn_time)
+
+#  Task-1:
+#  ANN search yields relatively high precision@10 of 0.832
+#  This suggests that most retreuved results overlap with exact k-NN results
+#  ANN query time is 28.58 ms. This is significantly lower than the exact k-NN time, which is 73.39 ms.
+#  This suggests that ANN shows strong time-performance advantage
+#  Given relatively high precision and materially lower time ANN offers a good balance between accuracy and time-efficiency
+
