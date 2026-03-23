@@ -32,3 +32,8 @@ Fork → Clone → Branch → Implement → PR → Review
 * Push the branch to the forked repo
 * Create a Pull Request from the fork back to the main repo
 * We will review the PR and provide feedback through GitHub
+
+## **Observations**
+Average precision@10: 0.8320
+Average ANN query time: 7.38 ms
+Average exact k-NN query time: 32.66 ms
