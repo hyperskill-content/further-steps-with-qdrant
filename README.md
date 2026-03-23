@@ -32,3 +32,14 @@ Fork → Clone → Branch → Implement → PR → Review
 * Push the branch to the forked repo
 * Create a Pull Request from the fork back to the main repo
 * We will review the PR and provide feedback through GitHub
+
+## **Observations**
+=======================================================
+hnsw_ef      avg_precision        avg_query_time_ms
+=======================================================
+10           0.8190               3.9521
+20           0.8310               3.1071
+50           0.8320               3.3232
+100          0.8320               3.9691
+200          0.8320               4.4074
+=======================================================
