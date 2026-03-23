@@ -32,3 +32,6 @@ Fork → Clone → Branch → Implement → PR → Review
 * Push the branch to the forked repo
 * Create a Pull Request from the fork back to the main repo
 * We will review the PR and provide feedback through GitHub
+
+## **Observations**
+![Screenshot 2026-03-23 at 17.03.51.png](../../Library/CloudStorage/OneDrive-azureford/Desktop/Screenshot%202026-03-23%20at%2017.03.51.png)
