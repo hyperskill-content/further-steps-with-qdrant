@@ -122,3 +122,11 @@ if __name__ == "__main__":
         avg_ann_false,
         avg_knn_false,
     )
+
+
+#  Task-3:
+#  The configuration with rescoring (rescore=True) achieves almost ideal precision@10 of 0.999
+#  This means that the loss in accuracy from quantization is almost entirely recovered by re-evaluating the top candidates using the original vectors
+#  On the contrary with rescoring disabled (rescore=False) precision falls down noticeably to 0.832
+#  This means that relying solely on quantized vectors yields noticeable approximation error
+#  These results suggest that quantization can provide efficiency benefits, but rescoring is crucial if high accuracy is required, as it effectively balances execution time and precision
