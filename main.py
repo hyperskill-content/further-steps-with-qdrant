@@ -60,3 +60,10 @@ avg_ann_time = sum(ann_times) / len(ann_times)
 avg_knn_time = sum(knn_times) / len(knn_times)
 
 result_formatting(k, avg_precision, avg_ann_time, avg_knn_time)
+
+# Task 2: reflection
+# Higher hnsw_ef improves precision
+# hnsw_ef at 100 and more helps to reach perfect accuracy (1.0)
+# This suggests that higher hnsw_ef produces results closer to exact k-NN
+# However, with higher hnsw_ef time efficiency falls and time to execute search grows from 16.11 ms to 22.4 ms
+# hnsw_ef value between 50 and 100 looks optimal for time-performance albeit difference between 16 ms and 22 ms is not huge and depends on the hardware (I believe)
