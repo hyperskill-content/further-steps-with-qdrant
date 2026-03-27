@@ -16,14 +16,14 @@ Here, your task is to run the approximate search on the test dataset from the pr
 hnsw_ef_values = [10, 20, 50, 100, 200]
 ```
 
-Similarly to the previous stage, we will calculate the k-NN (exact) search results and use them as the ground truths to calculate the precision. For the approximate search with a different `hnsw_ef` values, you only have to modify the search_params in the `.query_points()` method of the client:
+Similarly to the previous stage, we will calculate the k-NN (exact) search results and use them as the ground truths to calculate the precision. For the approximate search with different `hnsw_ef` values, you only have to modify the search_params in the `.query_points()` method of the client:
 
 ```
 from qdrant_client import QdrantClient, models
 
 QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
-OLLECTION_NAME = 'arxiv_papers'
+COLLECTION_NAME = 'arxiv_papers'
 k = 10
 
 client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
@@ -65,7 +65,7 @@ results = [
 ]
 ```
 
-* Display the results and reflect on the obtained values. 
+* Display the results and reflect on the obtained values.  The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
 
 ## Useful resources 
 

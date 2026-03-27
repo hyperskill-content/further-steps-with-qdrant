@@ -1,5 +1,5 @@
 # Catching up
-In this project, we will reflect on the optimizations that can be applied to an existing Qdrant database to balance indexing speed, search speed, and the retrieval accuracy.
+In this project, we will reflect on the optimizations that can be applied to an existing Qdrant database to balance search speed and the retrieval accuracy.
 
 We assume you have successfully implemented the Vector database with Qdrant project and have an existing `arxiv_papers` collection to work with. If this is not the case, navigate to the first project and we will see you in a short time!
 
@@ -39,7 +39,7 @@ ann_result = client.query_points(
     limit=k
 ).points
 
-The exact k-NN search is done with the addition of the exact=True into the search_params of the .query_points() method:
+The exact k-NN search is done by adding exact=True to the search_params of the .query_points() method:
 
 knn_result = client.query_points(
     collection_name=COLLECTION_NAME,
@@ -82,7 +82,7 @@ def result_formatting(k, avg_precision, avg_ann_time, avg_knn_time):
 
 Here is the series of steps to perform:
 
-* Run the Qdrant Docker image (the same way as it was done in the stage 1 of the Vector database with Qdrant project);
+* Run the Qdrant Docker image (the same way as it was done in stage 1 of the Vector database with Qdrant project);
 
 * Download the [test dataset](../dataset/queries_embeddings.json) that will be used for the calculation. It is a JSON file with 100 queries and their corresponding text-embedding-ada-002 embeddings. The queries are stored as the keys, and the embeddings are stored as the values.
 
@@ -107,7 +107,7 @@ precision = len(ann_ids.intersection(knn_ids)) / k
 
 * Calculate the averages of the obtained logged time and the precision.
 
-* Display the averages and reflect on the obtained results.
+* Display the averages and reflect on the obtained results. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
 
 ## Useful resources 
 
@@ -115,5 +115,5 @@ precision = len(ann_ids.intersection(knn_ids)) / k
 [Precision and recall at K in ranking and recommendations from Evidently](https://www.evidentlyai.com/ranking-metrics/precision-recall-at-k)     
 [Hierarchical Navigable Small Worlds (HNSW) from Pinecone](https://www.pinecone.io/learn/series/faiss/hnsw/)    
 [Understanding the approximate nearest neighbor (ANN) algorithm from Elastic](https://www.elastic.co/blog/understanding-ann) 
-[kNN search from Elastic doccumentation](https://www.elastic.co/docs/solutions/search/vector/knn)   
+[kNN search from Elastic documentation](https://www.elastic.co/docs/solutions/search/vector/knn)   
 [exact = True in models.SearchParams()](https://qdrant.tech/documentation/guides/optimize/?q=exact%3Dtrue#fine-tuning-search-parameters)
