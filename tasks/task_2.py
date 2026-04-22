@@ -10,7 +10,9 @@ QUERIES_FILE = "../dataset/queries_embeddings.json"
 k = 10
 hnsw_ef_values = [10, 20, 50, 100, 200]
 
-client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+# ---
+# bumped timeout to 300s — exact k-NN on 411k vectors is slow and the default times out
+client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, timeout=300)
 
 
 def evaluate_hnsw_ef(k, hnsw_ef_values, test_dataset):
@@ -26,10 +28,12 @@ def evaluate_hnsw_ef(k, hnsw_ef_values, test_dataset):
         ground_truth[query] = set(item.id for item in knn_result)
 
     results = []
-    precisions = []
-    times = []
 
     for hnsw_ef in hnsw_ef_values:
+        # reset for each hnsw_ef value so averages don't bleed across iterations
+        precisions = []
+        times = []
+
         for query, embedding in test_dataset.items():
             start = time.time()
             ann_result = client.query_points(
