@@ -41,3 +41,24 @@ The time differences are actually pretty small in absolute terms (3.4 ms vs 6.4 
 It's also worth noting that these times are much faster than the ANN times from task 1 (39.5 ms). That's probably because task 1 was measuring end-to-end including network overhead across more queries, while these numbers reflect Qdrant running warm with the index already loaded.
 
 The takeaway: `hnsw_ef` is a useful knob when you want to squeeze more precision out of your HNSW index without rebuilding it. For this dataset, anything above 100 gets you to near-perfect recall.
+
+---
+
+### Task 3 — Scalar Quantization
+
+#### Observed values
+
+```
+rescore=True  | precision@10: 1.0000 | avg time: 6.03 ms
+rescore=False | precision@10: 1.0000 | avg time: 6.87 ms
+```
+
+#### Reflection
+
+Both modes hit perfect precision (1.0000), which lines up with what the task description says about `text-embedding-ada-002` being a model that handles binary and scalar quantization well. Compressing the 1536-dim float32 vectors down to int8 loses very little information for this particular embedding space.
+
+The `rescore=True` run is actually slightly faster here (6.03 ms vs 6.87 ms), which is a bit counterintuitive since rescoring does extra work — it retrieves a larger candidate pool via quantized vectors, then re-ranks using the full float32 vectors. The difference is small enough that it's likely measurement variance rather than a meaningful signal, but it also shows that the re-ranking overhead is negligible when the index is warm and local.
+
+The more interesting story is precision: with `rescore=False`, the search runs entirely on compressed int8 vectors without any re-ranking step. For most embedding models this would cost you accuracy, but for ada-002 the int8 quantization is tight enough that you're still getting perfect recall. In a production scenario where you care about latency, `rescore=False` is tempting precisely because of that — you're trading a safety net you don't really need for a simpler, faster query path.
+
+In summary: scalar quantization is essentially free for this model and dataset. You get 4x storage reduction with no precision loss, and both rescore modes perform well.
