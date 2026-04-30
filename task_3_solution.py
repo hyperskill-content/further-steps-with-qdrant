@@ -40,7 +40,7 @@ def evaluate_quantization(rescore):
             query=embedding,
             limit=k,
             search_params=models.SearchParams(
-                quantization=models.QuantizationSearchParams(ignore=True)
+                exact=True
             ),
         ).points
         knn_times.append(time.time() - start_time)
