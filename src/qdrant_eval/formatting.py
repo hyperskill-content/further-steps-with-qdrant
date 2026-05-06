@@ -18,3 +18,10 @@ def format_hnsw_ef_results(results: list[dict]) -> None:
             f"{row['avg_precision']:>14.4f} | "
             f"{row['avg_query_time_ms']:>18.2f}"
         )
+
+
+def format_quantization_block(label: str, k: int, result: dict) -> None:
+    print(f"--- {label} ---")
+    print(f"Average precision@{k}: {result['avg_precision']:.4f}")
+    print(f"Average ANN query time: {result['avg_ann_time'] * 1000:.2f} ms")
+    print(f"Average exact k-NN query time: {result['avg_knn_time'] * 1000:.2f} ms")
