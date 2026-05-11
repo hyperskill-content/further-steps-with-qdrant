@@ -15,6 +15,8 @@ from qdrant_eval.formatting import format_quantization_block
 from qdrant_eval.metrics import precision_at_k
 from qdrant_eval.search import ann_search, knn_search, timed
 
+WARMUP_QUERIES = 10
+
 
 def enable_scalar_quantization(client: QdrantClient) -> None:
     client.update_collection(
@@ -40,19 +42,32 @@ def wait_until_green(client: QdrantClient, poll_s: float = 1.0, max_s: float = 6
     raise TimeoutError(f"Collection did not reach GREEN within {max_s}s")
 
 
-def evaluate_quantization(
-    test_dataset: dict[str, list[float]],
+def compute_ground_truth(
+    client: QdrantClient,
+    embeddings: list[list[float]],
+    k: int = K,
+) -> tuple[list[list[models.ScoredPoint]], float]:
+    # Bypass quantization so the baseline is full-precision exact k-NN.
+    knn_params = models.SearchParams(
+        quantization=models.QuantizationSearchParams(ignore=True)
+    )
+    truths: list[list[models.ScoredPoint]] = []
+    times: list[float] = []
+    for embedding in embeddings:
+        points, t = timed(knn_search, client, embedding, k, knn_params)
+        truths.append(points)
+        times.append(t)
+    return truths, mean(times)
+
+
+def measure_ann(
+    client: QdrantClient,
+    embeddings: list[list[float]],
+    ground_truth: list[list[models.ScoredPoint]],
     rescore: bool,
     oversampling: float = 2.0,
     k: int = K,
 ) -> dict[str, float]:
-    client = build_client()
-
-    # Ground truth: bypass quantization so the baseline is full-precision exact k-NN.
-    knn_params = models.SearchParams(
-        quantization=models.QuantizationSearchParams(ignore=True)
-    )
-    # ANN: search over quantized vectors with the requested rescore behavior.
     ann_params = models.SearchParams(
         quantization=models.QuantizationSearchParams(
             rescore=rescore,
@@ -60,21 +75,22 @@ def evaluate_quantization(
         )
     )
 
+    # Warmup: page in the quantized segments and (for rescore=True) the
+    # original vectors, so the first measurements aren't dominated by cold
+    # mmap page-faults.
+    for embedding in embeddings[:WARMUP_QUERIES]:
+        ann_search(client, embedding, k, ann_params)
+
     precisions: list[float] = []
     ann_times: list[float] = []
-    knn_times: list[float] = []
-
-    for embedding in test_dataset.values():
-        knn_points, knn_t = timed(knn_search, client, embedding, k, knn_params)
-        ann_points, ann_t = timed(ann_search, client, embedding, k, ann_params)
-        precisions.append(precision_at_k(ann_points, knn_points, k))
-        ann_times.append(ann_t)
-        knn_times.append(knn_t)
+    for embedding, truth in zip(embeddings, ground_truth):
+        points, t = timed(ann_search, client, embedding, k, ann_params)
+        precisions.append(precision_at_k(points, truth, k))
+        ann_times.append(t)
 
     return {
         "avg_precision": mean(precisions),
         "avg_ann_time": mean(ann_times),
-        "avg_knn_time": mean(knn_times),
     }
 
 
@@ -85,12 +101,24 @@ if __name__ == "__main__":
     enable_scalar_quantization(client)
     print("Waiting for collection to re-index (status=green) ...")
     wait_until_green(client)
-    print("Collection ready. Running evaluation.\n")
+    print("Collection ready.\n")
 
     test_dataset = load_test_dataset()
-    res_rescore = evaluate_quantization(test_dataset, rescore=True)
-    res_no_rescore = evaluate_quantization(test_dataset, rescore=False)
+    embeddings = list(test_dataset.values())
 
+    print("Computing exact k-NN ground truth (one pass, full-precision) ...")
+    ground_truth, avg_knn_time = compute_ground_truth(client, embeddings)
+    print(f"Ground truth ready. Avg exact k-NN time: {avg_knn_time * 1000:.2f} ms\n")
+
+    print("Measuring ANN with rescore=True ...")
+    res_rescore = measure_ann(client, embeddings, ground_truth, rescore=True)
+    res_rescore["avg_knn_time"] = avg_knn_time
+
+    print("Measuring ANN with rescore=False ...")
+    res_no_rescore = measure_ann(client, embeddings, ground_truth, rescore=False)
+    res_no_rescore["avg_knn_time"] = avg_knn_time
+
+    print()
     format_quantization_block("rescore=True (oversampling=2.0)", K, res_rescore)
     print()
     format_quantization_block("rescore=False (oversampling=2.0)", K, res_no_rescore)

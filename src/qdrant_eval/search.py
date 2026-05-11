@@ -46,6 +46,6 @@ def knn_search(
 
 
 def timed(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> tuple[Any, float]:
-    start = time.time()
+    start = time.perf_counter()
     result = fn(*args, **kwargs)
-    return result, time.time() - start
+    return result, time.perf_counter() - start
