@@ -112,8 +112,8 @@ precision = len(ann_ids.intersection(knn_ids)) / k
 ## Useful resources 
 
 ### Docs
-[Precision and recall at K in ranking and recommendations from Evidently](https://www.evidentlyai.com/ranking-metrics/precision-recall-at-k)     
-[Hierarchical Navigable Small Worlds (HNSW) from Pinecone](https://www.pinecone.io/learn/series/faiss/hnsw/)    
-[Understanding the approximate nearest neighbor (ANN) algorithm from Elastic](https://www.elastic.co/blog/understanding-ann) 
-[kNN search from Elastic documentation](https://www.elastic.co/docs/solutions/search/vector/knn)   
-[exact = True in models.SearchParams()](https://qdrant.tech/documentation/guides/optimize/?q=exact%3Dtrue#fine-tuning-search-parameters)
+1. [Precision and recall at K in ranking and recommendations from Evidently](https://www.evidentlyai.com/ranking-metrics/precision-recall-at-k)     
+2. [Hierarchical Navigable Small Worlds (HNSW) from Pinecone](https://www.pinecone.io/learn/series/faiss/hnsw/)    
+3. [Understanding the approximate nearest neighbor (ANN) algorithm from Elastic](https://www.elastic.co/blog/understanding-ann)           
+4. [kNN search from Elastic documentation](https://www.elastic.co/docs/solutions/search/vector/knn)             
+5. [exact = True in models.SearchParams()](https://qdrant.tech/documentation/guides/optimize/?q=exact%3Dtrue#fine-tuning-search-parameters)

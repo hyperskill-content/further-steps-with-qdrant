@@ -70,4 +70,4 @@ results = [
 ## Useful resources 
 
 ### Topics
-[Hierarchical Navigable Small Worlds](https://hyperskill.org/learn/step/52669)     
+1. [Hierarchical Navigable Small Worlds](https://hyperskill.org/learn/step/52669)     

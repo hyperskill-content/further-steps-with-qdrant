@@ -6,14 +6,34 @@ This project demonstrates the optimizations of Qdrant, a vector-first database, 
 Here are the main starter directories and files in this repo:
 
 ```
+├── .github/
+│   └── PULL_REQUEST_TEMPLATE.md
 ├── tasks/
 │   ├── task_1.md
 │   ├── task_2.md
-│   └── task_3.md
+│   ├── task_3.md
+│   └── SOLUTION.md
 ├── dataset/
+│   └── queries_embeddings.json
 ├── README.md
+├── pyproject.toml
+├── uv.lock
 └── .gitignore
 ```
+
+## **Setup**
+
+This project uses [uv](https://docs.astral.sh/uv/) to manage the Python environment and dependencies.
+
+* Install uv if you don't have it yet (see the [installation guide](https://docs.astral.sh/uv/getting-started/installation/))
+* Install the project dependencies:
+  ```
+  uv sync
+  ```
+* Run your solution script for a task:
+  ```
+  uv run python <your_script>.py
+  ```
 
 ## **Tasks**
 

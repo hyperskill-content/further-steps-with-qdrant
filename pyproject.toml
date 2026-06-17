@@ -1,0 +1,12 @@
+[project]
+name = "further-steps-with-qdrant"
+version = "0.1.0"
+description = "Qdrant optimization tasks: ANN vs. exact k-NN precision, HNSW ef tuning, and vector quantization trade-offs between speed, accuracy, and storage."
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=2.43.0",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+    "qdrant-client>=1.18.0",
+    "requests>=2.34.2",
+]

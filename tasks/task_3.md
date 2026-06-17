@@ -66,4 +66,4 @@ Run the function two times: first, with `rescore = True`, and then, with `rescor
 ## Useful resources 
 
 ### Topics
-[Quantization from Qdrant](https://qdrant.tech/documentation/guides/quantization/)     
+1. [Quantization from Qdrant](https://qdrant.tech/documentation/guides/quantization/)     
