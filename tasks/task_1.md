@@ -19,11 +19,17 @@ A value of 1 indicates that all approximate search results are identical to the 
 
 "Out of all the items the search retrieved, how many are true nearest neighbors?"
 
-Note that in the context of this project, the precision@k is the same as the accuracy (this is not true in the general case), and they will be used interchangeably here. 
+Note that precision@k and recall@k coincide here, since recall@k is
+
+$$\text{Recall@k}=\frac{|\text{ANN results} \cap \text{Exact results}|}{|\text{Exact results}|}$$
+
+and $|\text{Exact results}| = k$ by construction — the exact top-k is used as the golden set. This is specific to this setup: in typical IR evaluation, relevance is independently labeled and the relevant-set size has nothing to do with $k$, so the two metrics diverge.
+
+This is also why the exercise generalizes: the exact k-NN result is a golden dataset, and checking precision@k against it is a standard eval for a retrieval system — the same pattern applies in production with a curated relevance-labeled set in place of a brute-force baseline.
 
 Here is how you can perform the approximate (the default) search with the Qdrant client:
 
-```
+```python
 from qdrant_client import QdrantClient, models
 
 QDRANT_HOST = "localhost"
@@ -38,9 +44,11 @@ ann_result = client.query_points(
     query=embedding,
     limit=k
 ).points
+```
 
 The exact k-NN search is done by adding exact=True to the search_params of the .query_points() method:
 
+```python
 knn_result = client.query_points(
     collection_name=COLLECTION_NAME,
     query=embedding,
@@ -55,7 +63,7 @@ The main goal of this task is to implement a function that calculates precision@
 
 To calculate the average time, you can adapt the following snippet (we assume the embeddings are being iterated through, so this snippet will calculate the time for a single query):
 
-```
+```python
 import time
 
 knn_times = []
@@ -73,7 +81,7 @@ knn_times.append(knn_time)
 
 To print your results, you can utilize the following formatting function:
 
-```
+```python
 def result_formatting(k, avg_precision, avg_ann_time, avg_knn_time):
     print(f'Average precision@{k}: {avg_precision:.4f}')
     print(f'Average ANN query time: {avg_ann_time * 1000:.2f} ms')
@@ -88,7 +96,7 @@ Here is the series of steps to perform:
 
 * Load the dataset with the script. This can be done as follows:
 
-```
+```python
 import json 
 
 with open(QUERIES_FILE, 'r', encoding='utf-8') as file:
@@ -97,7 +105,7 @@ with open(QUERIES_FILE, 'r', encoding='utf-8') as file:
 
 * For each embedding in the test_dataset, run the exact and the approximate searches, calculate the precision, and log the time for a single query. The precision of a single query can be calculated as
 
-```
+```python
 ann_ids = set(item.id for item in ann_result)
 knn_ids = set(item.id for item in knn_result)  
 precision = len(ann_ids.intersection(knn_ids)) / k

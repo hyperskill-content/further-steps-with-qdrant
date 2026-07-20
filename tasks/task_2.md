@@ -12,13 +12,13 @@ In this stage, we will explore how different values of the `hnsw_ef` parameter a
 
 Here, your task is to run the approximate search on the test dataset from the previous stage with the following values of `hnsw_ef`:
 
-```
+```python
 hnsw_ef_values = [10, 20, 50, 100, 200]
 ```
 
 Similarly to the previous stage, we will calculate the k-NN (exact) search results and use them as the ground truths to calculate the precision. For the approximate search with different `hnsw_ef` values, you only have to modify the search_params in the `.query_points()` method of the client:
 
-```
+```python
 from qdrant_client import QdrantClient, models
 
 QDRANT_HOST = "localhost"
@@ -36,6 +36,8 @@ ann_result = client.query_points(
 ).points
 ```
 
+**A note on cache warming:** the first time data is accessed, Qdrant and the OS page cache have to load it from disk, which adds a one-time cost. If `hnsw_ef_values` is timed in order with no warm-up, whichever value runs first absorbs this cost and looks artificially slow, while later values benefit from an already-warm cache, independent of `hnsw_ef` itself. Run a few throwaway queries against the collection before timing starts, and/or repeat each `hnsw_ef` value a few times and average, discarding the first run.
+
 Here are the steps to solve this stage:
 
 * Keep the test_dataset from the previous stage.
@@ -49,15 +51,17 @@ Here are the steps to solve this stage:
 
     * `test_dataset`: The test dataset containing query vectors.
 
-* Perform the exact search with k=10 for every embedding in the test dataset. Extract the IDs of the retrieved points from the exact search and store them in the `ground_truth` dictionary with the query ID as the key (the keys are the natural language questions from the test_dataset)
+* Perform the exact search with k=10 for every (query, embedding) pair in the test dataset (iterate over `test_dataset.items()`, since you need both the query text and its embedding). Extract the IDs of the retrieved points from the exact search and store them in the `ground_truth` dictionary with the query ID as the key (the keys are the natural language questions from the test_dataset)
 
-* For each value in the `hnsw_ef_values`, run the approximate search with k=10 for every embedding in the test_dataset. Like in the previous stage, record the query execution time and append the elapsed times to a list (such that you can see the average time for a query for the different values of `hnsw_ef_values`). Extract the IDs of the retrieved points from the approximate search and retrieve the ground truth IDs for the query from the `ground_truth` dictionary.
+* Before timing the `hnsw_ef` sweep, run a handful of throwaway approximate queries against the collection to warm the cache (see the note above).
+
+* For each value in the `hnsw_ef_values`, run the approximate search with k=10 for every (query, embedding) pair in the test_dataset (again via `test_dataset.items()`). Like in the previous stage, record the query execution time and append the elapsed times to a list (such that you can see the average time for a query for the different values of `hnsw_ef_values`). Extract the IDs of the retrieved points from the approximate search and retrieve the ground truth IDs for the query from the `ground_truth` dictionary.
 
 * Find the intersection of the approximate search IDs and ground truth IDs, and calculate the precision. Append those precisions to a list (such that you can obtain the average precision for the corresponding value of `hnsw_ef`).
 
 * After processing all queries for the current `hnsw_ef` value, calculate the average precision and the average query time. Make a dictionary with these parameters and append them to a results list. The results list can be in the following format:
 
-```
+```python
 results = [
     {"hnsw_ef": 10, "avg_precision": 0.5, "avg_query_time_ms": 1.932982444763183},
     {"hnsw_ef": 20, "avg_precision": 0.5, "avg_query_time_ms": 2.932982444763183},

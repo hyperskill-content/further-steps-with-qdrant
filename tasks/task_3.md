@@ -17,7 +17,7 @@ Binary quantization is a type of quantization where each vector component is rep
 In this task, you will also modify the k-NN vs ANN accuracy and speed function from the previous tasks. Here, we ask you to update the collection with a quantization config and scalar quantization. Here is the code you can use:
 
 
-```
+```python
 from qdrant_client import QdrantClient, models
 # the initialization code here
 
@@ -34,11 +34,13 @@ client.update_collection(
 )
 ```
 
-Here, we quantize into `int8` type. `quantile=0.99` clips the values beyond the 99th percentile (the top 1% extreme values). This prevents outliers from skewing the quantization range. `always_ram=False` allows the quantized vectors to be stored on disk rather than always loaded into memory (such that quantized data can be loaded from disk as needed instead of residing entirely in memory).
+Here, we quantize into `int8` type. `quantile=0.99` clips the values beyond the 99th percentile (the top 1% extreme values). This prevents outliers from skewing the quantization range.
 
-Once you quantize the embeddings, your searches will be in the quantized embeddings by default. In case you wish to disable this behavior, use the following code (this snippet is relevant for the kNN quantization - since we want to retrieve the ground truth values and compare them to the results of the quantized search):
+`always_ram` controls where the *quantized* vectors live, independently of where the *original* vectors live. If a collection's original vectors are stored on disk (`on_disk=True`, done to save memory on a large dataset), `always_ram=True` still pins the small quantized vectors in RAM — so the cheap approximate part of the search runs entirely in memory, and only the final rescoring step has to touch disk for the original vectors. `always_ram=False` (used here) doesn't force this: quantized vectors are cached the same way as the rest of the segment, so they can be evicted and re-read from disk like anything else. The common production pattern is actually the opposite of this default: `always_ram=True` combined with original vectors on disk, since that's what gives you both a small memory footprint (only the quantized vectors are guaranteed resident) and fast search (RAM-resident candidate lookup, disk touched only for the reduced rescoring set).
 
-```
+Once you quantize the embeddings, your searches will be in the quantized embeddings by default. In case you wish to disable this behavior, use the following code (this snippet is relevant when computing the exact k-NN baseline against a quantized collection, since the exact search needs to run on real vectors to remain a meaningful baseline):
+
+```python
 result = client.query_points(
     collection_name=COLLECTION_NAME,
     query=query_vector,
@@ -49,9 +51,11 @@ result = client.query_points(
 ).points
 ```
 
+`ignore=True` tells Qdrant to skip the quantized vectors for this search and use only the original, full-precision vectors — for both graph traversal and scoring. Once a collection has quantization configured, searches use the quantized vectors by default, so this is the override you reach for whenever you need a real, non-quantized search without removing the quantization config from the collection.
+
 For the ANN search, you can use the following `search_params`:
 
-```
+```python
 search_params = models.SearchParams(
     quantization=models.QuantizationSearchParams(
         rescore=True,
@@ -60,10 +64,13 @@ search_params = models.SearchParams(
 )
 ```
 
+Quantized search here is a two-stage process. First, Qdrant uses the cheap quantized vectors to quickly retrieve `limit * oversampling` candidates — with `oversampling=2.0` and `limit=k=10`, that's 20 candidates. 
+Then, if `rescore=True`, Qdrant recomputes the exact distance for each of those 20 candidates using the original, full-precision vectors, and returns the top 10 from that refined ranking, recovering most of the accuracy quantization would otherwise cost, at the price of extra reads against the original vectors. If `rescore=False`, that refinement is skipped and the top 10 are returned straight from the quantized scores — faster, but lower accuracy, since quantized similarity is a coarser ranking signal than exact similarity. `oversampling` controls how large a candidate pool the coarse quantized stage hands to rescoring: a bigger pool is more likely to contain the true top-k, at the cost of more work during rescoring.
+
 Run the function two times: first, with `rescore = True`, and then, with `rescore = False`. Observe the results and reflect on their meaning. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
 
 
 ## Useful resources 
 
-### Topics
-1. [Quantization from Qdrant](https://qdrant.tech/documentation/guides/quantization/)     
+### Docs
+1. [Quantization from Qdrant](https://qdrant.tech/documentation/manage-data/quantization/)     
