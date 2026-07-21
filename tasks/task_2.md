@@ -69,7 +69,7 @@ results = [
 ]
 ```
 
-* Display the results and reflect on the obtained values.  The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
+* Display the results and write up a reflection on the obtained values. A written reflection is a required part of your submission. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
 
 ## Useful resources 
 

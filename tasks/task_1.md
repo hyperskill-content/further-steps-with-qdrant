@@ -103,7 +103,7 @@ with open(QUERIES_FILE, 'r', encoding='utf-8') as file:
     test_dataset = json.load(file)
 ```
 
-* For each embedding in the test_dataset, run the exact and the approximate searches, calculate the precision, and log the time for a single query. The precision of a single query can be calculated as
+* For each embedding in `test_dataset.values()` (or each `query, embedding` pair via `test_dataset.items()`), run the exact and the approximate searches, calculate the precision, and log the time for a single query. The precision of a single query can be calculated as
 
 ```python
 ann_ids = set(item.id for item in ann_result)
@@ -115,7 +115,7 @@ precision = len(ann_ids.intersection(knn_ids)) / k
 
 * Calculate the averages of the obtained logged time and the precision.
 
-* Display the averages and reflect on the obtained results. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
+* Display the averages and write up a reflection on the obtained results. A written reflection is a required part of your submission. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
 
 ## Useful resources 
 

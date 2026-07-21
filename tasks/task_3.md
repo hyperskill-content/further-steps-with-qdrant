@@ -67,7 +67,7 @@ search_params = models.SearchParams(
 Quantized search here is a two-stage process. First, Qdrant uses the cheap quantized vectors to quickly retrieve `limit * oversampling` candidates — with `oversampling=2.0` and `limit=k=10`, that's 20 candidates. 
 Then, if `rescore=True`, Qdrant recomputes the exact distance for each of those 20 candidates using the original, full-precision vectors, and returns the top 10 from that refined ranking, recovering most of the accuracy quantization would otherwise cost, at the price of extra reads against the original vectors. If `rescore=False`, that refinement is skipped and the top 10 are returned straight from the quantized scores — faster, but lower accuracy, since quantized similarity is a coarser ranking signal than exact similarity. `oversampling` controls how large a candidate pool the coarse quantized stage hands to rescoring: a bigger pool is more likely to contain the true top-k, at the cost of more work during rescoring.
 
-Run the function two times: first, with `rescore = True`, and then, with `rescore = False`. Observe the results and reflect on their meaning. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
+Run the function two times: first, with `rescore = True`, and then, with `rescore = False`. Observe the results and write up a reflection on their meaning. A written reflection is a required part of your submission. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
 
 
 ## Useful resources 
