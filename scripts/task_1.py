@@ -1,11 +1,13 @@
 from qdrant_client import QdrantClient, models
+from pathlib import Path
 import time, json
 
 
 QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
 COLLECTION_NAME = 'arxiv_papers'
-QUERIES_FILE = "/home/dan/Downloads/queries_embeddings.json"
+SCRIPT_DIR = Path(__file__).resolve().parent
+QUERIES_FILE = SCRIPT_DIR / ".." / "dataset" / "queries_embeddings.json"
 k = 10
 
 client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
@@ -20,7 +22,6 @@ def do_query(embedding: list, k: int, exact: bool=False):
             collection_name=COLLECTION_NAME,
             query=embedding,
             limit=k,
-            with_payload=True,
             search_params=models.SearchParams(exact=True),
         ).points
     else:
@@ -28,7 +29,7 @@ def do_query(embedding: list, k: int, exact: bool=False):
             collection_name=COLLECTION_NAME,
             query=embedding,
             limit=k,
-            # search_params=models.SearchParams(hnsw_ef=1),
+            search_params=models.SearchParams(hnsw_ef=1),
         ).points
     return result
 
