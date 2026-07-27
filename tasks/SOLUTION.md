@@ -1,27 +1,14 @@
 ### Observed values 
 
 ```
-uv run evaluate_precision.py -k 10 -ef 128
-Average precision@10: 1.0000
-Average ANN query time: 16.43 ms
-Average exact k-NN query time: 153.02 ms
-
-uv run evaluate_precision.py -k 10 -ef 32
-Average precision@10: 0.9920
-Average ANN query time: 12.71 ms
-Average exact k-NN query time: 152.58 ms
-
-uv run evaluate_precision.py -k 100 -ef 128
-Average precision@100: 0.9919
-Average ANN query time: 25.21 ms
-Average exact k-NN query time: 167.22 ms
-
-uv run evaluate_precision.py -k 100 -ef 32
-Average precision@100: 0.9771
-Average ANN query time: 25.44 ms
-Average exact k-NN query time: 175.22 ms
+v run evaluate_precision.py --test-hnsw-ef
+hnsw_ef=10: avg_precision=0.9330, avg_query_time_ms=6.82
+hnsw_ef=20: avg_precision=0.9820, avg_query_time_ms=7.35
+hnsw_ef=50: avg_precision=0.9970, avg_query_time_ms=7.65
+hnsw_ef=100: avg_precision=1.0000, avg_query_time_ms=9.21
+hnsw_ef=200: avg_precision=1.0000, avg_query_time_ms=15.07
 ```
 
 ### Reflection
 
-The higher the k the slower the ANN query time. The lower the ef the faster the query but the lower the precision.
+The lower the hnsw_ef the faster the query but the lower the precision.
