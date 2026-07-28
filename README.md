@@ -52,3 +52,7 @@ Fork → Clone → Branch → Implement → PR → Review
 * Push the branch to the forked repo
 * Create a Pull Request from the fork back to the main repo
 * We will review the PR and provide feedback through GitHub
+
+## Karo's Notes
+- Run Qdrant docker container: `docker run -p 6333:6333 -p 6334:6334 -v "$(pwd)"/qdrant_storage:/qdrant/storage:z qdrant/qdrant`
+- Accessing local Qdrant dashboard: http://localhost:6333/dashboard#/collections
