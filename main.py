@@ -26,7 +26,7 @@ def result_formatting(k, avg_precision, avg_ann_time, avg_knn_time):
     print(f'Average exact k-NN query time: {avg_knn_time * 1000:.2f} ms')
 
 
-def precision_at_k(test_dataset, k=10):
+def precision_at_k(test_dataset, k=10, hnsw_ef=100):
 
     # Iterate over test_dataset to get embeddings and
     # run the exact and the approximate searches, calculate precision, and log the time for each query.
@@ -76,9 +76,65 @@ def precision_at_k(test_dataset, k=10):
     print(f"-" * 100)
     result_formatting(k, avg_precision, avg_ann_time, avg_knn_time)
 
+def evaluate_hnsw_ef(k=10, hnsw_ef_values=[10, 20, 50, 100, 200], test_dataset=None):
+    if test_dataset is None:
+        test_dataset = {}
+
+    ground_truth = {}
+    
+    # 1. Compute ground truth for all queries
+    for query, embedding in test_dataset.items():
+        knn_result = client.query_points(
+            collection_name=COLLECTION_NAME,
+            query=embedding,
+            limit=k,
+            search_params=models.SearchParams(exact=True),
+        ).points
+        ground_truth[query] = set(item.id for item in knn_result)
+
+    # 2. Warm the cache once before timing the hnsw_ef sweep
+    for query, embedding in list(test_dataset.items())[:5]:
+        client.query_points(
+            collection_name=COLLECTION_NAME,
+            query=embedding,
+            limit=k,
+            search_params=models.SearchParams(hnsw_ef=200)
+        )
+
+    # 3. Perform hnsw_ef sweep
+    results = []
+    for hnsw_ef in hnsw_ef_values:
+        precisions = []
+        ann_times = []
+        for query, embedding in test_dataset.items():
+            start_time_ann = time.time()
+            ann_result = client.query_points(
+                collection_name=COLLECTION_NAME,
+                query=embedding,
+                limit=k,
+                search_params=models.SearchParams(hnsw_ef=hnsw_ef)
+            ).points
+            ann_time = time.time() - start_time_ann
+            ann_times.append(ann_time)
+
+            ann_ids = set(item.id for item in ann_result)
+            precision = len(ann_ids.intersection(ground_truth[query])) / k
+            precisions.append(precision)
+
+        avg_precision = sum(precisions) / len(precisions) if precisions else 0.0
+        avg_query_time_ms = (sum(ann_times) / len(ann_times) * 1000) if ann_times else 0.0
+
+        results.append({
+            "hnsw_ef": hnsw_ef,
+            "avg_precision": avg_precision,
+            "avg_query_time_ms": avg_query_time_ms
+        })
+
+    return results
+
 # Load test dataset: 100 queries and their corresponding text-embedding-ada-002 embeddings.
 with open(QUERIES_FILE, 'r', encoding='utf-8') as file:
     test_dataset = json.load(file)
 
-precision_at_k(test_dataset, k=10)
+print(json.dumps(evaluate_hnsw_ef(k=10, hnsw_ef_values=[10, 20, 50, 100, 200], test_dataset=test_dataset), indent=2))
 
