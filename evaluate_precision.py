@@ -121,6 +121,102 @@ def evaluate_hnsw_ef(k, hnsw_ef_values, test_dataset):
     return results
 
 
+def enable_scalar_quantization():
+    client.update_collection(
+        collection_name=COLLECTION_NAME,
+        optimizer_config=models.OptimizersConfigDiff(),
+        quantization_config=models.ScalarQuantization(
+            scalar=models.ScalarQuantizationConfig(
+                type=models.ScalarType.INT8,
+                quantile=0.99,
+                always_ram=False,
+            ),
+        ),
+    )
+
+
+def evaluate_quantization(k, test_dataset, rescore):
+    ground_truth = {}
+    exact_times = []
+
+    quantization_search_params = (
+        models.QuantizationSearchParams(
+            rescore=True,
+            oversampling=2.0,
+        )
+        if rescore
+        else models.QuantizationSearchParams(
+            rescore=False,
+        )
+    )
+
+    for query, embedding in test_dataset.items():
+        start_time = time.time()
+        knn_result = client.query_points(
+            collection_name=COLLECTION_NAME,
+            query=embedding,
+            limit=k,
+            search_params=models.SearchParams(
+                exact=True,
+                quantization=models.QuantizationSearchParams(ignore=True),
+            ),
+        ).points
+        exact_time = time.time() - start_time
+        exact_times.append(exact_time)
+
+        ground_truth[query] = set(item.id for item in knn_result)
+
+    warmup_embeddings = list(test_dataset.values())[:5]
+    for embedding in warmup_embeddings:
+        client.query_points(
+            collection_name=COLLECTION_NAME,
+            query=embedding,
+            limit=k,
+            search_params=models.SearchParams(
+                quantization=quantization_search_params,
+            ),
+        ).points
+
+    ann_times = []
+    precisions = []
+
+    for query, embedding in test_dataset.items():
+        start_time = time.time()
+        ann_result = client.query_points(
+            collection_name=COLLECTION_NAME,
+            query=embedding,
+            limit=k,
+            search_params=models.SearchParams(
+                quantization=quantization_search_params,
+            ),
+        ).points
+        ann_time = time.time() - start_time
+        ann_times.append(ann_time)
+
+        ann_ids = set(item.id for item in ann_result)
+        exact_ids = ground_truth[query]
+        precision = len(ann_ids.intersection(exact_ids)) / k
+        precisions.append(precision)
+
+    avg_precision = sum(precisions) / len(precisions)
+    avg_ann_time_ms = (sum(ann_times) / len(ann_times)) * 1000
+    avg_exact_time_ms = (sum(exact_times) / len(exact_times)) * 1000
+
+    print(
+        f"quantized_search rescore={rescore}: "
+        f"avg_precision={avg_precision:.4f}, "
+        f"avg_query_time_ms={avg_ann_time_ms:.2f}, "
+        f"avg_exact_query_time_ms={avg_exact_time_ms:.2f}"
+    )
+
+    return {
+        "rescore": rescore,
+        "avg_precision": avg_precision,
+        "avg_query_time_ms": avg_ann_time_ms,
+        "avg_exact_query_time_ms": avg_exact_time_ms,
+    }
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate Qdrant ANN precision.")
     parser.add_argument(
@@ -143,10 +239,25 @@ if __name__ == "__main__":
         help="Run hnsw_ef sweep for Task 2"
     )
 
+    parser.add_argument(
+        "--enable-quantization",
+        action="store_true",
+        help="Update the collection with scalar int8 quantization"
+    )
+
+    parser.add_argument(
+        "--test-quantization",
+        action="store_true",
+        help="Run quantized search evaluation for Task 3"
+    )
+
     args = parser.parse_args()
 
     with open(QUERIES_FILE, "r", encoding="utf-8") as file:
         test_dataset = json.load(file)
+
+    if args.enable_quantization:
+        enable_scalar_quantization()
 
     if args.test_hnsw_ef:
         evaluate_hnsw_ef(
@@ -154,5 +265,8 @@ if __name__ == "__main__":
             hnsw_ef_values=[10, 20, 50, 100, 200],
             test_dataset=test_dataset,
         )
+    elif args.test_quantization:
+        evaluate_quantization(k=args.k, test_dataset=test_dataset, rescore=True)
+        evaluate_quantization(k=args.k, test_dataset=test_dataset, rescore=False)
     else:
         evaluate_precision(test_dataset, k=args.k, ef=args.ef)
