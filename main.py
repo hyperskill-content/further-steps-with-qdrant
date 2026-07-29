@@ -26,7 +26,7 @@ def result_formatting(k, avg_precision, avg_ann_time, avg_knn_time):
     print(f'Average exact k-NN query time: {avg_knn_time * 1000:.2f} ms')
 
 
-def precision_at_k(test_dataset, k=10, hnsw_ef=100):
+def precision_at_k(test_dataset, rescore=True, k=10):
 
     # Iterate over test_dataset to get embeddings and
     # run the exact and the approximate searches, calculate precision, and log the time for each query.
@@ -36,11 +36,18 @@ def precision_at_k(test_dataset, k=10, hnsw_ef=100):
 
     for query, embedding in test_dataset.items():
         # ANN (Approximate Nearest Neighbor) search
+        search_params = models.SearchParams(
+            quantization=models.QuantizationSearchParams(
+                rescore=rescore,
+                oversampling=2.0,
+            )
+        )
         start_time_ann = time.time()
         ann_result = client.query_points(
             collection_name=COLLECTION_NAME,
             query=embedding,
-            limit=k
+            limit=k,
+            search_params=search_params,
         ).points
         ann_time = time.time() - start_time_ann
         ann_times.append(ann_time)
@@ -51,7 +58,8 @@ def precision_at_k(test_dataset, k=10, hnsw_ef=100):
             collection_name=COLLECTION_NAME,
             query=embedding,
             limit=k,
-            search_params=models.SearchParams(exact=True),
+            search_params=models.SearchParams(exact=True,
+                                              quantization=models.QuantizationSearchParams(ignore=True)),
         ).points
         knn_time = time.time() - start_time_knn
         knn_times.append(knn_time)
@@ -63,7 +71,7 @@ def precision_at_k(test_dataset, k=10, hnsw_ef=100):
         # print(f"ANN IDs: {ann_ids}")
         # print(f"k-NN IDs: {knn_ids}")
         precision = len(ann_ids.intersection(knn_ids)) / k
-        print(f"Query: {query}, Precision: {precision}")
+        # print(f"Query: {query}, Precision: {precision}")
         # print(f"-"*100)
         precisions.append(precision)
 
@@ -74,6 +82,7 @@ def precision_at_k(test_dataset, k=10, hnsw_ef=100):
 
     # Display results
     print(f"-" * 100)
+    print(f"Rescore: {rescore}")
     result_formatting(k, avg_precision, avg_ann_time, avg_knn_time)
 
 def evaluate_hnsw_ef(k=10, hnsw_ef_values=[10, 20, 50, 100, 200], test_dataset=None):
@@ -136,5 +145,22 @@ def evaluate_hnsw_ef(k=10, hnsw_ef_values=[10, 20, 50, 100, 200], test_dataset=N
 with open(QUERIES_FILE, 'r', encoding='utf-8') as file:
     test_dataset = json.load(file)
 
-print(json.dumps(evaluate_hnsw_ef(k=10, hnsw_ef_values=[10, 20, 50, 100, 200], test_dataset=test_dataset), indent=2))
+collection_info = client.get_collection(collection_name=COLLECTION_NAME)
 
+if collection_info.config.quantization_config is None:
+    print("Quantization not configured yet. Updating collection...")
+    client.update_collection(
+        collection_name=COLLECTION_NAME,
+        optimizer_config=models.OptimizersConfigDiff(),
+        quantization_config=models.ScalarQuantization(
+            scalar=models.ScalarQuantizationConfig(
+                type=models.ScalarType.INT8,
+                quantile=0.99,
+                always_ram=False,
+            ),
+        ),
+    )
+
+# print(json.dumps(evaluate_hnsw_ef(k=10, hnsw_ef_values=[10, 20, 50, 100, 200], test_dataset=test_dataset), indent=2))
+precision_at_k(test_dataset, rescore=False)
+precision_at_k(test_dataset, rescore=True)
