@@ -1,14 +1,12 @@
 from qdrant_client import QdrantClient, models
 import json
 import time
+from pathlib import Path
 from dotenv import load_dotenv
 
-# OK Run the Qdrant Docker image (see stage 1 of the Vector database with Qdrant project);
-# OK Download the test dataset that will be used for the calculation.
-#    It is a JSON file with 100 queries and their corresponding text-embedding-ada-002 embeddings. The queries are stored as the keys, and the embeddings are stored as the values.
-# Load the dataset with the script:
 
-QUERIES_FILE = "C:/Users/frank/PycharmProjects/HyperskillAI/further-steps-with-qdrant/dataset/queries_embeddings.json"
+QUERIES_FILE = Path(__file__).parent / "dataset" / "queries_embeddings.json"
+
 with open(QUERIES_FILE, 'r', encoding='utf-8') as file:
     test_dataset = json.load(file)
 
@@ -23,16 +21,13 @@ client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
 
 # For each embedding in test_dataset.values() (or each query, embedding pair via test_dataset.items()),
 # Run the exact and the approximate searches, calculate the precision, and log the time for a single query.
-# The precision of a single query can be calculated as
 
 ann_times = []
 knn_times = []
 precisions = []
 for query, embedding in test_dataset.items():
-    # Run exact and approximate searches
-    # Log the average time for a single query
-    # Calculate precision
-    # Append the logged times and the precision to their corresponding lists.
+    # Run exact and approximate searches / Log the average time for a single query
+    # Calculate precision / Append the logged times and the precision to their corresponding lists.
 
     start_time_ann = time.time()
     ann_result = client.query_points (
@@ -76,10 +71,3 @@ def result_formatting(k, avg_precision, avg_ann_time, avg_knn_time):
 
 if __name__ == "__main__":
     result_formatting (10, averages["avg_precision"], averages["avg_ann_time"], averages["avg_knn_time"])
-
-    # FILE_PATH = "C:/Users/Frank/Documents/Backup/AI Sp3 data/ml-arxiv-embeddings.json"
-    # path = FILE_PATH or os.getenv("FILE_PATH")
-    #
-    # print(f"Main> Path to use={path}")
-    # load_vectors_to_qdrant(path)
-    #

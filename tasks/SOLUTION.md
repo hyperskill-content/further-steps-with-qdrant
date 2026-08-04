@@ -1,22 +1,30 @@
 ### Observed values 
 
 ```
-stdout of the solution script for the task
-Average precision@10: 1.0000
-Average ANN query time: 62.86 ms
-Average exact k-NN query time: 62.89 ms
+TASK 3 - k-NN vs approximate search
+TO DO
 
-Average precision@10: 1.0000
-Average ANN query time: 66.96 ms
-Average exact k-NN query time: 65.99 ms
+TASK 2 - Balance the search: Fine-tuning search parameters (e.g. hsnw-ef)
+TO DO
+
+TASK 1 - Quantization
+Average precision@10: 0.9990
+Average ANN query time: 16.39 ms
+Average exact k-NN query time: 109.97 ms
+
+Average precision@10: 0.9990
+Average ANN query time: 15.61 ms
+Average exact k-NN query time: 97.63 ms
+
+Average precision@10: 0.9990
+Average ANN query time: 15.47 ms
+Average exact k-NN query time: 98.38 ms
+
 ```
 
 
 ### Reflection
-
-1. The precision@10 is 1.0000 for both runs, indicating that the ANN index is able to return the correct results for all queries.
-2. The query times for both ANN and exact k-NN are very close. This means the ANN index is able to return results that are very similar to the exact k-NN results. 
-   * The ANN index has a similar accuracy as the k-NN index for a similar speed, for the given dataset.
-3. Possible we have these good results for the ANN index because the test data set with only 100 embeddings is small.
-   * This means we can use the k-nn index for small datasets, without losing speed 
-   * Or we can use the ANN index for small datasets, without losing accuracy.
+After (forced) creating an index on the Qdrant client we get this better results.
+1. The precision@10 is 0.9990 or just below 1.0 for both runs, indicating that the ANN index is able to return nearly correct results for all queries.
+2. The query times for both ANN are 6 times les then for exact k-NN. 
+3. This means it is beneficial to use the  ANN index with 6x faster and near correct accuracy for the test set.
