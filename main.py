@@ -18,6 +18,18 @@ k = 10
 
 client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, timeout=60)
 
+client.update_collection(
+    collection_name=COLLECTION_NAME,
+    optimizer_config=models.OptimizersConfigDiff(),
+    quantization_config=models.ScalarQuantization(
+        scalar=models.ScalarQuantizationConfig(
+            type=models.ScalarType.INT8,
+            quantile=0.99,
+            always_ram=False,
+        ),
+    ),
+)
+
 
 def evaluate_hnsw_ef(k_nearest, hnsw_ef_values, test_dataset):
     ground_truths = {}
@@ -28,8 +40,11 @@ def evaluate_hnsw_ef(k_nearest, hnsw_ef_values, test_dataset):
         knn_result = client.query_points(
             collection_name=COLLECTION_NAME,
             query=embedding,
-            limit=k,
-            search_params=models.SearchParams (exact=True)
+            limit=k_nearest,
+            search_params=models.SearchParams (
+                exact=True,
+                quantization=models.QuantizationSearchParams (ignore=True)  # ignore is False by default
+            ),
         ).points
         ground_truths[query] = set(item.id for item in knn_result)
 
@@ -46,7 +61,13 @@ def evaluate_hnsw_ef(k_nearest, hnsw_ef_values, test_dataset):
                 collection_name=COLLECTION_NAME,
                 query=warmup_embedding,
                 limit=k_nearest,
-                search_params=models.SearchParams (hnsw_ef=hnsw_ef),
+                search_params=models.SearchParams (
+                    hnsw_ef=hnsw_ef,
+                    quantization=models.QuantizationSearchParams (
+                        rescore=True,
+                        oversampling=2.0,
+                    ),
+                ),
             )
         for query, embedding in test_dataset.items():
             # Run exact and approximate searches / Log the average time for a single query
@@ -57,7 +78,13 @@ def evaluate_hnsw_ef(k_nearest, hnsw_ef_values, test_dataset):
                 collection_name=COLLECTION_NAME,
                 query=embedding,
                 limit=k_nearest,
-                search_params=models.SearchParams (hnsw_ef=hnsw_ef)  # the modification
+                search_params = models.SearchParams (
+                    hnsw_ef=hnsw_ef,
+                    quantization=models.QuantizationSearchParams (
+                        rescore=True,
+                        oversampling=2.0,
+                    ),
+                ),
             ).points
             ann_time = time.time() - start_time_ann
             ann_times[hnsw_ef].append(ann_time)

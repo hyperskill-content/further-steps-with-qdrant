@@ -2,8 +2,25 @@
 
 ```
 TASK 3 - Quantization 
-TO DO
+hnsw_ef= 10 | avg_precision=0.9220 | avg_query_time=11.98 ms
+hnsw_ef= 20 | avg_precision=0.9770 | avg_query_time=11.09 ms
+hnsw_ef= 50 | avg_precision=0.9980 | avg_query_time=10.87 ms
+hnsw_ef=100 | avg_precision=0.9990 | avg_query_time=11.99 ms
+hnsw_ef=200 | avg_precision=0.9990 | avg_query_time=14.61 ms
 
+hnsw_ef= 10 | avg_precision=0.9220 | avg_query_time=12.92 ms
+hnsw_ef= 20 | avg_precision=0.9770 | avg_query_time=16.60 ms
+hnsw_ef= 50 | avg_precision=0.9980 | avg_query_time=9.80 ms
+hnsw_ef=100 | avg_precision=0.9990 | avg_query_time=10.95 ms
+hnsw_ef=200 | avg_precision=0.9990 | avg_query_time=14.35 ms
+
+hnsw_ef= 10 | avg_precision=0.9220 | avg_query_time=14.01 ms
+hnsw_ef= 20 | avg_precision=0.9770 | avg_query_time=15.69 ms
+hnsw_ef= 50 | avg_precision=0.9980 | avg_query_time=12.15 ms
+hnsw_ef=100 | avg_precision=0.9990 | avg_query_time=10.56 ms
+hnsw_ef=200 | avg_precision=0.9990 | avg_query_time=13.94 ms
+
+******
 TASK 2 - Balance the search: Fine-tuning search parameters (e.g. hsnw-ef)
 hnsw_ef= 10 | avg_precision=0.9220 | avg_query_time=11.93 ms
 hnsw_ef= 20 | avg_precision=0.9770 | avg_query_time=11.91 ms
@@ -17,6 +34,7 @@ hnsw_ef= 50 | avg_precision=0.9980 | avg_query_time=14.91 ms
 hnsw_ef=100 | avg_precision=0.9990 | avg_query_time=14.63 ms
 hnsw_ef=200 | avg_precision=0.9990 | avg_query_time=16.29 ms
 
+******
 TASK 1 - k-NN vs approximate search 
 Average precision@10: 0.9990
 Average ANN query time: 16.39 ms
@@ -35,7 +53,9 @@ Average exact k-NN query time: 98.38 ms
 ### Reflection
 
 TASK 3 - Quantization 
-
+1. The average query speed decreases with increasing hnsw_ef values (for 3 testruns)
+2. This till an optimum minima value for hnsw_ef of 50 (once) or 100 (twice), and for comparable average precision (50 - 0.998) and (100 - 0.999).
+3. To minimalize speed (and especially the total execution time) for a good precision (> 0.99) we propose to use a value for hnsw_ef of 50.
 
 TASK 2 - Balance the search: Fine-tuning search parameters (e.g. hsnw-ef)
 1. We see the average precision fundamentally improves to >0.99 from hnsw_ef = 50
