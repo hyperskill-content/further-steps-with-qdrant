@@ -55,7 +55,7 @@ def evaluate_hnsw_ef(k_nearest, hnsw_ef_values, test_dataset):
         ann_times = {hnsw_ef: []}
         precisions = {hnsw_ef: []}
 
-        # Warm up cache
+        # Warm up cache, with rescore value
         for _ in range (5):
             client.query_points (
                 collection_name=COLLECTION_NAME,
@@ -64,13 +64,13 @@ def evaluate_hnsw_ef(k_nearest, hnsw_ef_values, test_dataset):
                 search_params=models.SearchParams (
                     hnsw_ef=hnsw_ef,
                     quantization=models.QuantizationSearchParams (
-                        rescore=True,
+                        rescore=False,
                         oversampling=2.0,
                     ),
                 ),
             )
         for query, embedding in test_dataset.items():
-            # Run exact and approximate searches / Log the average time for a single query
+            # Run approximate searches, with rescore value / Log the average time for a single query
             # Calculate precision / Append the logged times and the precision to their corresponding lists.
 
             start_time_ann = time.time()
@@ -81,7 +81,7 @@ def evaluate_hnsw_ef(k_nearest, hnsw_ef_values, test_dataset):
                 search_params = models.SearchParams (
                     hnsw_ef=hnsw_ef,
                     quantization=models.QuantizationSearchParams (
-                        rescore=True,
+                        rescore=False,
                         oversampling=2.0,
                     ),
                 ),

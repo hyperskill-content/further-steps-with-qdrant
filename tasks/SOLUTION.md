@@ -2,6 +2,33 @@
 
 ```
 TASK 3 - Quantization 
+* rescore = True (for calculation ANN search and warm-up)
+hnsw_ef= 10 | avg_precision=0.9710 | avg_query_time=15.73 ms
+hnsw_ef= 20 | avg_precision=0.9710 | avg_query_time=15.08 ms
+hnsw_ef= 50 | avg_precision=0.9930 | avg_query_time=17.34 ms
+hnsw_ef=100 | avg_precision=0.9970 | avg_query_time=17.22 ms
+hnsw_ef=200 | avg_precision=0.9980 | avg_query_time=17.89 ms
+
+hnsw_ef= 10 | avg_precision=0.9710 | avg_query_time=17.96 ms
+hnsw_ef= 20 | avg_precision=0.9710 | avg_query_time=15.94 ms
+hnsw_ef= 50 | avg_precision=0.9930 | avg_query_time=13.60 ms
+hnsw_ef=100 | avg_precision=0.9970 | avg_query_time=13.40 ms
+hnsw_ef=200 | avg_precision=0.9980 | avg_query_time=19.40 ms
+
+* rescore = False (for calculation ANN search and warm-up)
+hnsw_ef= 10 | avg_precision=0.8460 | avg_query_time=19.11 ms
+hnsw_ef= 20 | avg_precision=0.8460 | avg_query_time=17.10 ms
+hnsw_ef= 50 | avg_precision=0.8600 | avg_query_time=17.93 ms
+hnsw_ef=100 | avg_precision=0.8610 | avg_query_time=15.12 ms
+hnsw_ef=200 | avg_precision=0.8610 | avg_query_time=16.21 ms
+
+hnsw_ef= 10 | avg_precision=0.8460 | avg_query_time=16.46 ms
+hnsw_ef= 20 | avg_precision=0.8460 | avg_query_time=14.15 ms
+hnsw_ef= 50 | avg_precision=0.8600 | avg_query_time=15.04 ms
+hnsw_ef=100 | avg_precision=0.8610 | avg_query_time=15.03 ms
+hnsw_ef=200 | avg_precision=0.8610 | avg_query_time=15.74 ms
+
+*** Wrong - Only creating different hnsw-values (rescore=True) - d.d. 5-08
 hnsw_ef= 10 | avg_precision=0.9220 | avg_query_time=11.98 ms
 hnsw_ef= 20 | avg_precision=0.9770 | avg_query_time=11.09 ms
 hnsw_ef= 50 | avg_precision=0.9980 | avg_query_time=10.87 ms
@@ -53,9 +80,11 @@ Average exact k-NN query time: 98.38 ms
 ### Reflection
 
 TASK 3 - Quantization 
-1. The average query speed decreases with increasing hnsw_ef values (for 3 testruns)
-2. This till an optimum minima value for hnsw_ef of 50 (once) or 100 (twice), and for comparable average precision (50 - 0.998) and (100 - 0.999).
-3. To minimalize speed (and especially the total execution time) for a good precision (> 0.99) we propose to use a value for hnsw_ef of 50.
+We varied now the rescore parameter (True and False) for ANN search and warmup, while we keep the different hnsw-ef values.
+1. With rescore=false :
+   - the speed remains similar or decreases only with 10%;
+   - but the average precision decreases with a little bit less then 20% to 0.84 - 0.86, depending on hnsw-ef value.
+2. Given the fundamental depreciation of the precision it is not an option to NOT use the rescore values (rescore=False) for the ANN search.
 
 TASK 2 - Balance the search: Fine-tuning search parameters (e.g. hsnw-ef)
 1. We see the average precision fundamentally improves to >0.99 from hnsw_ef = 50
