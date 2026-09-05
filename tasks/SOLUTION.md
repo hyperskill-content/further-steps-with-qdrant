@@ -37,3 +37,26 @@ The gains in precision are front-loaded and show diminishing returns as `hnsw_ef
 Query time itself stayed roughly flat and increased gently and near-linearly across `ef=10, 20, 50, 100` (5.76 ms -> 6.89 ms), before jumping sharply at `ef=200`. This is consistent with the mechanics of the algorithm: for smaller candidate lists, the extra exploration is cheap relative to fixed per-query overhead (e.g., network round-trip, deserialization), but past a certain point the graph exploration cost begins to dominate and scale more visibly with `ef`.
 
 Overall, the sweep illustrates a textbook diminishing-returns curve for the precision/speed trade-off controlled by `hnsw_ef`. The "knee" of the curve sits roughly around `ef=50` to `ef=100`, where the search already achieves 99.8-99.9% of exact search's accuracy at a query time cost only marginally higher than the cheapest setting tested. Pushing to `ef=200` to close the last 0.1% precision gap costs nearly 50% more query time for a difference (0.999 vs. 1.000 precision) that is unlikely to be noticeable in most real-world applications. This suggests that, for this dataset and collection configuration, a mid-range `hnsw_ef` value (e.g., 50-100) offers the best practical balance between search accuracy and latency, rather than defaulting to the highest tested value.
+
+### TASK2
+### Observed values
+
+```
+$ uv run python task_3.py
+ rescore |  avg_precision |  avg_query_time_ms
+------------------------------------------------
+    True |         0.9990 |               7.81
+   False |         0.9990 |               7.34
+```
+
+### Reflection
+
+### Reflection
+
+Enabling scalar (int8) quantization on the `arxiv_papers` collection produced a striking result: both `rescore=True` and `rescore=False` achieved the same average precision@10 of 0.9990 -- identical to the plain (non-quantized) HNSW search from Task 2 at its default `hnsw_ef`. In other words, compressing each float32 vector component down to an 8-bit integer cost essentially no measurable retrieval accuracy on this dataset, even without the exact-distance rescoring step that is supposed to recover most of the accuracy quantization would otherwise sacrifice.
+
+The timing difference between the two settings was small but in the expected direction: `rescore=True` took 7.81 ms on average versus 7.34 ms for `rescore=False`, a roughly 6% overhead. This matches the theory -- with `rescore=True`, Qdrant must fetch the original full-precision vectors for the oversampled candidate pool (`limit * oversampling = 10 * 2.0 = 20` candidates) and recompute exact distances on them before returning the top 10, whereas `rescore=False` returns the top 10 directly from the coarse quantized scores, skipping that extra read-and-recompute step.
+
+The fact that skipping rescoring cost nothing in precision here suggests that int8 scalar quantization with `quantile=0.99` preserves the *relative ordering* of vectors extremely well for this embedding model (`text-embedding-ada-002`), at least for the top-10 neighborhood of these particular queries. This is consistent with the task's own framing of scalar quantization as "perhaps the most universal [type] in terms of retaining high accuracy." It also lines up with the note that binary and product quantization are far more lossy by comparison -- scalar quantization's 8-bit resolution per dimension is evidently enough to keep the coarse ranking of nearby vectors essentially intact, so the more expensive rescoring step becomes a safety net that, in this case, wasn't needed to hit near-perfect precision.
+
+Practically, this implies that for this dataset and embedding model, it would be reasonable to run with `rescore=False` in production to shave a small amount of latency off every query, since the measured accuracy cost was zero. However, this conclusion is specific to `oversampling=2.0` and this particular set of 100 test queries; a smaller oversampling value, a different `quantile`, or queries drawn from a different, more challenging distribution of documents could plausibly widen the gap between rescoring and not rescoring, so this result shouldn't be assumed to generalize without re-testing under those conditions.
