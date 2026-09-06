@@ -46,6 +46,23 @@ def apply_scalar_quantization(client):
     )
 
 
+def wait_for_quantization(client, poll_interval=1.0, timeout=120):
+    """Block until the collection has finished (re)building/optimizing after
+    the quantization config update, so subsequent queries actually hit the
+    quantized vectors rather than silently falling back to full precision."""
+    start = time.time()
+    while True:
+        info = client.get_collection(COLLECTION_NAME)
+        if info.status == models.CollectionStatus.GREEN:
+            return
+        if time.time() - start > timeout:
+            raise TimeoutError(
+                f"Collection did not finish optimizing within {timeout}s "
+                f"(last status: {info.status})"
+            )
+        time.sleep(poll_interval)
+
+
 def build_ground_truth(client, k, test_dataset):
     """Exact k-NN search, ignoring quantized vectors, used as the golden set."""
     ground_truth = {}
@@ -118,6 +135,11 @@ def main():
 
     # Step 1: enable scalar (int8) quantization on the collection
     apply_scalar_quantization(client)
+
+    # Step 1b: wait for the background quantization build to finish before
+    # running any queries, otherwise rescore=True/False can silently behave
+    # identically because the quantized vectors aren't ready yet
+    wait_for_quantization(client)
 
     # Step 2: build the ground truth using exact search on the original vectors
     ground_truth = build_ground_truth(client, K, test_dataset)

@@ -38,25 +38,28 @@ Query time itself stayed roughly flat and increased gently and near-linearly acr
 
 Overall, the sweep illustrates a textbook diminishing-returns curve for the precision/speed trade-off controlled by `hnsw_ef`. The "knee" of the curve sits roughly around `ef=50` to `ef=100`, where the search already achieves 99.8-99.9% of exact search's accuracy at a query time cost only marginally higher than the cheapest setting tested. Pushing to `ef=200` to close the last 0.1% precision gap costs nearly 50% more query time for a difference (0.999 vs. 1.000 precision) that is unlikely to be noticeable in most real-world applications. This suggests that, for this dataset and collection configuration, a mid-range `hnsw_ef` value (e.g., 50-100) offers the best practical balance between search accuracy and latency, rather than defaulting to the highest tested value.
 
-### TASK2
+### TASK3
 ### Observed values
 
 ```
-$ uv run python task_3.py
+$ uv run python task_3.py                                                   
  rescore |  avg_precision |  avg_query_time_ms
 ------------------------------------------------
-    True |         0.9990 |               7.81
-   False |         0.9990 |               7.34
+    True |         0.9990 |              10.85
+   False |         0.8470 |               5.72
 ```
 
 ### Reflection
 
+
 ### Reflection
 
-Enabling scalar (int8) quantization on the `arxiv_papers` collection produced a striking result: both `rescore=True` and `rescore=False` achieved the same average precision@10 of 0.9990 -- identical to the plain (non-quantized) HNSW search from Task 2 at its default `hnsw_ef`. In other words, compressing each float32 vector component down to an 8-bit integer cost essentially no measurable retrieval accuracy on this dataset, even without the exact-distance rescoring step that is supposed to recover most of the accuracy quantization would otherwise sacrifice.
+Enabling scalar (int8) quantization on the `arxiv_papers` collection and comparing `rescore=True` against `rescore=False` produced a clear and theory-consistent gap in both precision and query time.
 
-The timing difference between the two settings was small but in the expected direction: `rescore=True` took 7.81 ms on average versus 7.34 ms for `rescore=False`, a roughly 6% overhead. This matches the theory -- with `rescore=True`, Qdrant must fetch the original full-precision vectors for the oversampled candidate pool (`limit * oversampling = 10 * 2.0 = 20` candidates) and recompute exact distances on them before returning the top 10, whereas `rescore=False` returns the top 10 directly from the coarse quantized scores, skipping that extra read-and-recompute step.
+With `rescore=True`, average precision@10 was 0.9990 -- essentially matching the exact/HNSW baselines from Tasks 1 and 2 -- at an average query time of 10.85 ms. This is exactly what rescoring is designed to do: the coarse quantized stage first retrieves `limit * oversampling = 10 * 2.0 = 20` candidates using the cheap int8-quantized vectors, and then, because `rescore=True`, Qdrant fetches the original full-precision vectors for those 20 candidates and recomputes their exact distances, returning the top 10 from that refined ranking. The extra reads against full-precision vectors and the recomputation step explain the higher latency compared to the non-rescored run.
 
-The fact that skipping rescoring cost nothing in precision here suggests that int8 scalar quantization with `quantile=0.99` preserves the *relative ordering* of vectors extremely well for this embedding model (`text-embedding-ada-002`), at least for the top-10 neighborhood of these particular queries. This is consistent with the task's own framing of scalar quantization as "perhaps the most universal [type] in terms of retaining high accuracy." It also lines up with the note that binary and product quantization are far more lossy by comparison -- scalar quantization's 8-bit resolution per dimension is evidently enough to keep the coarse ranking of nearby vectors essentially intact, so the more expensive rescoring step becomes a safety net that, in this case, wasn't needed to hit near-perfect precision.
+With `rescore=False`, average precision@10 dropped to 0.8470, and average query time fell to 5.72 ms. Without the correction step, the top 10 are returned directly from the coarse int8-quantized similarity scores. Quantization maps the original float32 vector components onto a much smaller set of discrete int8 values (clipped at the 99th percentile per the `quantile=0.99` setting), so distances computed purely on the quantized representation are a noticeably less faithful approximation of the true distances in the original embedding space. The measured ~15 percentage-point drop in precision is a direct, quantifiable illustration of that information loss -- roughly 1 to 2 of every 10 returned results would differ from the true top-10 on average when skipping rescoring.
 
-Practically, this implies that for this dataset and embedding model, it would be reasonable to run with `rescore=False` in production to shave a small amount of latency off every query, since the measured accuracy cost was zero. However, this conclusion is specific to `oversampling=2.0` and this particular set of 100 test queries; a smaller oversampling value, a different `quantile`, or queries drawn from a different, more challenging distribution of documents could plausibly widen the gap between rescoring and not rescoring, so this result shouldn't be assumed to generalize without re-testing under those conditions.
+Together, the two runs show the accuracy/speed trade-off promised by the theory: `rescore=True` recovers almost all of the precision quantization would otherwise cost, at roughly 90% higher query latency (10.85 ms vs. 5.72 ms) than `rescore=False`. Whether this trade-off is worth it depends on the use case -- if the application requires near-exact recall, rescoring is close to mandatory once quantization is enabled; if a coarser but faster search is acceptable (e.g., as a first-pass filter in a larger pipeline), disabling rescoring is a legitimate way to trade away some precision for meaningfully lower latency.
+
+**Note on an earlier, incorrect measurement:** an initial run of this experiment showed identical precision (0.9990) for both `rescore=True` and `rescore=False`, which is not possible in theory, since rescoring should only ever help or be neutral, never make results identical when quantization is genuinely lossy. The cause was that `update_collection` with a `quantization_config` triggers a background optimization job to actually build the quantized vectors, and the script was issuing queries before that job had finished -- so both settings were effectively still searching against full-precision vectors, making `rescore` a no-op. The fix was to poll `client.get_collection(...)` and wait for `status == CollectionStatus.GREEN` before running any timed queries, ensuring the quantized index was fully built. Re-running after adding that wait produced the results shown above, which are the ones consistent with the underlying theory.
