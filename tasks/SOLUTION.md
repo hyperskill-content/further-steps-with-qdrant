@@ -14,4 +14,12 @@ Those averages show one pattern: the default search returns the exact top-10, an
 
 The 0.0010 shortfall is a single query, "Zero-shot learning in computer vision applications". Ranks 1–9 are the same papers in the same order. At rank 10 the approximate search returns *Multi-Cue Zero-Shot Learning with Strong Supervision* (score 0.871422) and the exact search returns *Lensless-camera based machine learning for image classification* (score 0.871458). The cosine scores differ by about 3.6e-5, so the default HNSW search stopped on a neighbor sitting immediately beside the true 10th hit. The other 99 queries match id for id and in the same order, which is why the printed average is 0.9990.
 
-The time gap is the same comparison on this collection. `exact=True` scores all 411,120 stored vectors and lands near 40 ms. The default call uses the HNSW index already built for `arxiv_papers` and lands near 6 ms, while still matching the exact top-10 on 99 of the 100 queries. On this test set, switching the search to exact mostly adds latency.
+The time gap is the same comparison on this collection. `exact=True` scores all 411,120 stored vectors and lands near 40 ms. The default call uses the HNSW index already built for `arxiv_papers` and lands near 6 ms, while still matching the exact top-10 on 99 of the 100 queries.
+
+Overall, for this collection the default approximate search gave the same results as exact search for these queries in a fraction of the time, so it looks like the right choice. The one difference is the rank-10 near-tie above; the other 99 queries matched exactly.
+
+A few things to keep in mind:
+
+- The times include the whole round trip from the script to Qdrant and back, not just the search itself. `time.time()` wraps each `query_points` call, so 6.37 ms and 40.56 ms include the client and the local trip. Both calls pay that cost, which is why the ~6.4× gap is still the comparison that matters.
+- This was one run on this machine. An earlier run of the same script was 6.35 ms and 39.90 ms, with precision still 0.9990. The times move a little; the precision did not.
+- 100 queries is a small test set. 0.9990 means the approximate search missed one neighbor across these queries, not that it never misses.
