@@ -20,6 +20,6 @@ Overall, for this collection the default approximate search gave the same result
 
 A few things to keep in mind:
 
-- The times include the whole round trip from the script to Qdrant and back, not just the search itself. `time.time()` wraps each `query_points` call, so 6.37 ms and 40.56 ms include the client and the local trip. Both calls pay that cost, which is why the ~6.4× gap is still the comparison that matters.
-- This was one run on this machine. An earlier run of the same script was 6.35 ms and 39.90 ms, with precision still 0.9990. The times move a little; the precision did not.
+- The times include the whole round trip from the script to Qdrant and back, not just the search itself. `time.perf_counter()` wraps each `query_points` call, so 6.37 ms and 40.56 ms include the client and the local trip. Both calls pay that cost, which is why the ~6.4× gap is still the comparison that matters.
+- This was one run on this machine. An earlier run of the same script was 6.35 ms and 39.90 ms, with precision still 0.9990. The times move a little between runs. The precision is expected to stay the same: the search is deterministic, so the same queries against the same collection return the same results. It would only change if the collection's contents changed between runs.
 - 100 queries is a small test set. 0.9990 means the approximate search missed one neighbor across these queries, not that it never misses.

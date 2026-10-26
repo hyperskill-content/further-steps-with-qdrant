@@ -31,22 +31,22 @@ def evaluate_precision(client, test_dataset, k=K):
     knn_times = []
 
     for embedding in test_dataset.values():
-        start_ann = time.time()
+        start_ann = time.perf_counter()
         ann_result = client.query_points(
             collection_name=COLLECTION_NAME,
             query=embedding,
             limit=k,
         ).points
-        ann_times.append(time.time() - start_ann)
+        ann_times.append(time.perf_counter() - start_ann)
 
-        start_knn = time.time()
+        start_knn = time.perf_counter()
         knn_result = client.query_points(
             collection_name=COLLECTION_NAME,
             query=embedding,
             limit=k,
             search_params=models.SearchParams(exact=True),
         ).points
-        knn_times.append(time.time() - start_knn)
+        knn_times.append(time.perf_counter() - start_knn)
 
         precisions.append(precision_at_k(ann_result, knn_result, k))
 
