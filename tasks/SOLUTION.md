@@ -71,4 +71,34 @@ During ANN search, HNSW keeps a candidate priority queue of size `ef` (`hnsw_ef`
 
 # Task 3 — Quantization
 
-*(to fill)*
+### Observed values
+
+```
+results =
+[
+  {"rescore": True,  "avg_precision": 0.998, "avg_query_time_ms": 3.219},
+  {"rescore": False, "avg_precision": 0.836, "avg_query_time_ms": 3.478},
+]
+```
+
+(100 queries; exact ground truth with `QuantizationSearchParams(ignore=True)`; scalar INT8, `quantile=0.99`, `always_ram=False`; ANN with `oversampling=2.0`. Collection waited until status=green before measuring. Script: `task_3.py`.)
+
+### Reflection
+
+**What quantization does here**
+
+Scalar INT8 maps each float component onto 256 buckets (clipped by the 99th-percentile quantile so outliers don’t stretch the range). Searches then use those cheap integers by default. Original float vectors stay available for exact search and for rescoring.
+
+**What the numbers say**
+
+1. **`rescore=True` almost matches exact** — Average precision@10 **0.998**. Coarse stage pulls `k * oversampling = 20` candidates from quantized scores; then Qdrant re-ranks those 20 with full-precision distances and returns the top 10. That recovers nearly all of the accuracy quantization would otherwise cost.
+
+2. **`rescore=False` drops quality hard** — Precision falls to **0.836**. Ranking is decided only by INT8 similarity, which is a coarser signal than float Cosine — true neighbors fall out of the top-10 often enough that ~16% of slots are wrong on average.
+
+3. **Latency is in the same ballpark** — ~3.2 ms with rescore vs ~3.5 ms without in this warm-cache run. Rescoring 20 vectors is cheap relative to the HNSW walk, so you do **not** get a meaningful speed win by turning rescore off here — you mainly lose accuracy. (On larger oversampling factors, colder disk, or bigger *k*, rescore cost would show up more clearly.)
+
+4. **Why `ignore=True` on the baseline** — After quantization is configured, default search uses quantized vectors. Exact ground truth must force full-precision (`ignore=True` + `exact=True`), or the “golden” set itself would be quantized and the comparison would be meaningless.
+
+5. **Practical takeaway** — Scalar INT8 + `rescore=True` + modest oversampling is the production-friendly default: smaller/faster candidate scoring, accuracy restored on a shortlist. Skipping rescore is only attractive when you explicitly accept lower recall for absolute cheapest ranking.
+
+**Link to Tasks 1–2:** Task 1 showed default ANN already matches exact top-10. Task 2 showed search-time `hnsw_ef` can break that if set too low. Task 3 shows a *representation* trade-off: compress vectors for efficiency, then use **rescore** (not larger `ef` alone) to buy accuracy back.
