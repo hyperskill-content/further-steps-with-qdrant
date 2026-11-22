@@ -34,7 +34,38 @@ Average exact k-NN query time: 40.02 ms
 
 # Task 2 — Balance the Search
 
-*(to fill)*
+### Observed values
+
+```
+results =
+[
+  {"hnsw_ef": 10,  "avg_precision": 0.968, "avg_query_time_ms": 3.976},
+  {"hnsw_ef": 20,  "avg_precision": 0.991, "avg_query_time_ms": 2.965},
+  {"hnsw_ef": 50,  "avg_precision": 0.996, "avg_query_time_ms": 3.635},
+  {"hnsw_ef": 100, "avg_precision": 1.000, "avg_query_time_ms": 4.102},
+  {"hnsw_ef": 200, "avg_precision": 1.000, "avg_query_time_ms": 5.321},
+]
+```
+
+(100 queries; exact k-NN ground truth; cache warm-up before the sweep. Script: `task_2.py`.)
+
+### Reflection
+
+**What `hnsw_ef` is**
+
+During ANN search, HNSW keeps a candidate priority queue of size `ef` (`hnsw_ef` in Qdrant). A larger queue means the walker explores more neighbors before stopping — more chance to find the true nearest neighbors, more work per query.
+
+**What the numbers say**
+
+1. **Precision rises with `hnsw_ef`** — At `ef=10`, average precision@10 is **0.968** (ANN misses some exact neighbors). By `ef=20` we are at **0.991**, `ef=50` at **0.996**, and `ef=100` / `200` reach **1.000**. That is the classic recall/precision–vs–exploration trade-off.
+
+2. **Latency tends to grow once the cache is warm** — From `ef=20` → `200`, average query time went ~3.0 ms → ~5.3 ms. Exploring a bigger candidate list costs CPU. Absolute ms are small on this machine with a warm collection; the *direction* of the trade-off matters more than the absolute numbers.
+
+3. **Why `ef=10` looked slower than `ef=20` in this run** — Even with warm-up queries, the first timed setting can still absorb a bit of residual cold cost or timing noise. We discarded the first query of each sweep and still see that quirk at `ef=10`. Do not over-interpret a single cell; the stable story is: **higher ef → higher precision**, and **higher ef → generally higher latency** once past the noisy first setting.
+
+4. **Practical takeaway** — Default / mid-range `ef` (here ~50–100) already gets near-perfect top-10 agreement with exact search on this dataset. Pushing to 200 buys no more precision@10 but costs more time. For production you’d pick the smallest `ef` that meets your quality SLO.
+
+**Link to Task 1:** Task 1’s default ANN (implicit default `ef`) already hit precision 1.0. Task 2 shows that if you *force* a small `ef` (10), quality drops — so the knob is real.
 
 ---
 
