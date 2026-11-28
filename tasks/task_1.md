@@ -68,16 +68,18 @@ import time
 
 knn_times = []
 
-start_time_knn = time.time()
+start_time_knn = time.perf_counter()
 knn_result = client.query_points(
     collection_name=COLLECTION_NAME,
     query=embedding,
     limit=k,
     search_params=models.SearchParams(exact=True),
 ).points
-knn_time = time.time() - start_time_knn
+knn_time = time.perf_counter() - start_time_knn
 knn_times.append(knn_time)
 ```
+
+**A note on timing:** use `time.perf_counter()` rather than `time.time()` to measure durations. `time.time()` reads the system clock, which can be adjusted while the script runs (e.g. by NTP), so a measured interval can come out too long, too short, or even negative. `time.perf_counter()` is monotonic and uses the highest-resolution clock available; its value is only meaningful as a difference between two calls, which is exactly how it is used here.
 
 To print your results, you can utilize the following formatting function:
 
@@ -92,6 +94,18 @@ Here is the series of steps to perform:
 
 * Run the Qdrant Docker image (the same way as it was done in stage 1 of the Vector database with Qdrant project);
 
+* Check that the collection is ready before measuring anything:
+
+```python
+info = client.get_collection(COLLECTION_NAME)
+print(info.status, info.points_count, info.indexed_vectors_count)
+print(info.config.quantization_config)
+```
+
+The status should be `green`, `indexed_vectors_count` should match (or be very close to) `points_count`, and `quantization_config` should be `None`. Note:
+
+**A small collection may have no HNSW index at all.** Qdrant only builds an HNSW graph for a segment once its vectors exceed the optimizer's `indexing_threshold` (in KB, see `info.config.optimizer_config.indexing_threshold`). Smaller segments are searched by brute force, so the "approximate" search is actually exact and the comparison in this task measures nothing. The full `arxiv_papers` collection (~411k points) is well above the threshold; a truncated one with a few thousand points is not, and will show `indexed_vectors_count` far below `points_count`.
+
 * Download the [test dataset](../dataset/queries_embeddings.json) that will be used for the calculation. It is a JSON file with 100 queries and their corresponding text-embedding-ada-002 embeddings. The queries are stored as the keys, and the embeddings are stored as the values.
 
 * Load the dataset with the script. This can be done as follows:
@@ -102,6 +116,8 @@ import json
 with open(QUERIES_FILE, 'r', encoding='utf-8') as file:
     test_dataset = json.load(file)
 ```
+
+* Before timing, run a few throwaway queries (both approximate and exact) so the first timed queries don't absorb the one-time cost of opening the connection and loading data into the cache. Pass `with_payload=False` to `.query_points()`: you only need the IDs, and returning the payload adds the same transfer cost to both searches, which hides part of the difference you are trying to measure.
 
 * For each embedding in `test_dataset.values()` (or each `query, embedding` pair via `test_dataset.items()`), run the exact and the approximate searches, calculate the precision, and log the time for a single query. The precision of a single query can be calculated as
 

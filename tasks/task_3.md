@@ -38,6 +38,18 @@ Here, we quantize into `int8` type. `quantile=0.99` clips the values beyond the 
 
 `always_ram` controls where the *quantized* vectors live, independently of where the *original* vectors live. If a collection's original vectors are stored on disk (`on_disk=True`, done to save memory on a large dataset), `always_ram=True` still pins the small quantized vectors in RAM — so the cheap approximate part of the search runs entirely in memory, and only the final rescoring step has to touch disk for the original vectors. `always_ram=False` (used here) doesn't force this: quantized vectors are cached the same way as the rest of the segment, so they can be evicted and re-read from disk like anything else. The common production pattern is actually the opposite of this default: `always_ram=True` combined with original vectors on disk, since that's what gives you both a small memory footprint (only the quantized vectors are guaranteed resident) and fast search (RAM-resident candidate lookup, disk touched only for the reduced rescoring set).
 
+**What about memory?** Qdrant keeps the original float32 vectors alongside the int8 copies, because they are needed for rescoring and for `ignore=True` searches. Each value takes 1 byte in int8 against 4 bytes in float32. In your reflection, work out how much memory the vectors take before and after quantization in this task's setup (original vectors in RAM, `always_ram=False`), and what would change under the production pattern described above.
+
+**Wait for the quantized vectors to be built.** `update_collection` returns immediately; Qdrant builds the quantized vectors in the background, and the collection status is `yellow` while it works. Wait until it is `green` before measuring. Sleep a few seconds before the first check, since the status can still read `green` before the optimizer has picked up the change:
+
+```python
+import time
+
+time.sleep(5)
+while client.get_collection(COLLECTION_NAME).status != models.CollectionStatus.GREEN:
+    time.sleep(5)
+```
+
 Once you quantize the embeddings, your searches will be in the quantized embeddings by default. In case you wish to disable this behavior, use the following code (this snippet is relevant when computing the exact k-NN baseline against a quantized collection, since the exact search needs to run on real vectors to remain a meaningful baseline):
 
 ```python
@@ -65,9 +77,23 @@ search_params = models.SearchParams(
 ```
 
 Quantized search here is a two-stage process. First, Qdrant uses the cheap quantized vectors to quickly retrieve `limit * oversampling` candidates — with `oversampling=2.0` and `limit=k=10`, that's 20 candidates. 
-Then, if `rescore=True`, Qdrant recomputes the exact distance for each of those 20 candidates using the original, full-precision vectors, and returns the top 10 from that refined ranking, recovering most of the accuracy quantization would otherwise cost, at the price of extra reads against the original vectors. If `rescore=False`, that refinement is skipped and the top 10 are returned straight from the quantized scores — faster, but lower accuracy, since quantized similarity is a coarser ranking signal than exact similarity. `oversampling` controls how large a candidate pool the coarse quantized stage hands to rescoring: a bigger pool is more likely to contain the true top-k, at the cost of more work during rescoring.
+Then, if `rescore=True`, Qdrant recomputes the exact distance for each of those 20 candidates using the original, full-precision vectors, and returns the top 10 from that refined ranking, recovering most of the accuracy quantization would otherwise cost, at the price of extra reads against the original vectors. If `rescore=False`, that refinement is skipped and the top 10 are returned straight from the quantized scores — faster, but lower accuracy, since quantized similarity is a coarser ranking signal than exact similarity. `oversampling` controls how large a candidate pool the coarse quantized stage hands to rescoring: a bigger pool is more likely to contain the true top-k, at the cost of more work during rescoring. When comparing the two runs, note which ranking decides the final 10 results in each mode, and which of the search parameters can still affect the outcome when `rescore=False`.
 
-Run the function two times: first, with `rescore = True`, and then, with `rescore = False`. Observe the results and write up a reflection on their meaning. A written reflection is a required part of your submission. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
+Run the function two times: first, with `rescore = True`, and then, with `rescore = False`. Use the same warm-up and repeated-pass approach as in the previous stage: always running `rescore=True` first means it absorbs any remaining cold-cache cost, which can make it look slower than it is. Observe the results and write up a reflection on their meaning. A written reflection is a required part of your submission. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
+
+**After this task:** the quantization config stays on the collection, and every later search uses it unless `ignore=True` is passed. To rerun the earlier stages on the original vectors, either pass `ignore=True` there or remove quantization from the collection:
+
+```python
+client.update_collection(
+    collection_name=COLLECTION_NAME,
+    quantization_config=models.Disabled.DISABLED,
+)
+```
+
+**Optional extensions:**
+
+* Sweep `oversampling` (e.g. 1.0, 1.5, 2.0, 4.0) with `rescore=True` and see how large the candidate pool must be to recover full precision.
+* Try binary quantization (`models.BinaryQuantization`) and compare its precision with and without rescoring against the scalar results.
 
 
 ## Useful resources 

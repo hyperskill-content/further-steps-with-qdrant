@@ -6,6 +6,11 @@ In the previous stage, we have observed the differences between k-NN and the app
 
 When a query is performed, the HNSW algorithm starts searching from an entry point in the graph and explores neighboring nodes to find the closest vectors to the query vector. You can read more on the [inner workings of HNSW in the Faiss book chapter at Pinecone](https://www.pinecone.io/learn/series/faiss/hnsw/). The `hnsw_ef` parameter determines how many nodes the algorithm keeps in its priority queue (the list of candidates) during this search process. In the context of HNSW, this parameter is often referred to as ef and stands for "exploration factor". A larger candidate list allows to consider a broader set of potential nearest neighbors.
 
+Notes:
+
+* If you don't pass `hnsw_ef`, Qdrant uses the collection's `ef_construct` as the search-time `ef` (100 with the default HNSW config). `ef_construct` (used once, while building the graph) and `hnsw_ef` (used on every query) are separate settings: you can search with an `ef` larger than `ef_construct`. Keep this in mind when you compare the sweep with the default search from the previous stage.
+* During the search, HNSW keeps the best `ef` candidates found so far and expands the closest unexplored one, adding any neighbours that beat the worst entry in the list. It stops when no unexplored candidate is closer than that worst entry, and returns the top `k` from the list, so `ef` can't usefully be smaller than `k`. As you look at your results, consider how much room the list has beyond the `k` results at each `hnsw_ef` value, and what that room lets the search do.
+
 In this stage, we will explore how different values of the `hnsw_ef` parameter affect the accuracy and the speed of the query execution.
 
 ## Objectives
@@ -38,6 +43,13 @@ ann_result = client.query_points(
 
 **A note on cache warming:** the first time data is accessed, Qdrant and the OS page cache have to load it from disk, which adds a one-time cost. If `hnsw_ef_values` is timed in order with no warm-up, whichever value runs first absorbs this cost and looks artificially slow, while later values benefit from an already-warm cache, independent of `hnsw_ef` itself. Run a few throwaway queries against the collection before timing starts, and/or repeat each `hnsw_ef` value a few times and average, discarding the first run.
 
+Discarding only the first *query* is not enough: every query walks a different part of the graph, so the cold-cache cost is spread over the whole first pass, not concentrated in its first query. A robust setup is:
+
+* one untimed pass over all queries at the largest `hnsw_ef` (it visits the most of the graph), then
+* for each `hnsw_ef` value, 2–3 passes over all queries, discarding the first pass and averaging the rest.
+
+Precision doesn't change between passes (the search is deterministic on a fixed index), so it only needs to be computed once per value; only the timings benefit from repetition. If a result goes against the direction you'd expect, check whether your measurement method could explain it before interpreting it.
+
 Here are the steps to solve this stage:
 
 * Keep the test_dataset from the previous stage.
@@ -53,7 +65,7 @@ Here are the steps to solve this stage:
 
 * Perform the exact search with k=10 for every (query, embedding) pair in the test dataset (iterate over `test_dataset.items()`, since you need both the query text and its embedding). Extract the IDs of the retrieved points from the exact search and store them in the `ground_truth` dictionary with the query ID as the key (the keys are the natural language questions from the test_dataset)
 
-* Before timing the `hnsw_ef` sweep, run a handful of throwaway approximate queries against the collection to warm the cache (see the note above).
+* Before timing the `hnsw_ef` sweep, warm the cache with throwaway approximate queries, and repeat each value over several passes, discarding the first (see the note above).
 
 * For each value in the `hnsw_ef_values`, run the approximate search with k=10 for every (query, embedding) pair in the test_dataset (again via `test_dataset.items()`). Like in the previous stage, record the query execution time and append the elapsed times to a list (such that you can see the average time for a query for the different values of `hnsw_ef_values`). Extract the IDs of the retrieved points from the approximate search and retrieve the ground truth IDs for the query from the `ground_truth` dictionary.
 
@@ -70,6 +82,8 @@ results = [
 ```
 
 * Display the results and write up a reflection on the obtained values. A written reflection is a required part of your submission. The final answer for the task should follow the format outlined in [the solution template](SOLUTION.md).
+
+**Optional extension:** rerun the sweep with `k=20`. Compare how quickly precision saturates with how it did at `k=10`, and check whether the `hnsw_ef` that was "enough" before is still enough.
 
 ## Useful resources 
 
